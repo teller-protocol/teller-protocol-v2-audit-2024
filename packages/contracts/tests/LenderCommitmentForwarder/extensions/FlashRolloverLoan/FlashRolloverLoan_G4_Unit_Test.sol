@@ -19,15 +19,15 @@ import { MarketRegistryMock } from "../../../../contracts/mock/MarketRegistryMoc
 import { AavePoolAddressProviderMock } from "../../../../contracts/mock/aave/AavePoolAddressProviderMock.sol";
 import { AavePoolMock } from "../../../../contracts/mock/aave/AavePoolMock.sol";
 
-import { FlashRolloverLoan_G5 } from "../../../../contracts/LenderCommitmentForwarder/extensions/FlashRolloverLoan_G5.sol";
+import { FlashRolloverLoan_G4 } from "../../../../contracts/LenderCommitmentForwarder/extensions/FlashRolloverLoan_G4.sol";
 
-contract FlashRolloverLoanOverride is FlashRolloverLoan_G5 {
+contract FlashRolloverLoanOverride is FlashRolloverLoan_G4 {
     constructor(
         address _tellerV2,
         address _lenderCommitmentForwarder,
         address _aaveAddressProvider
     )
-        FlashRolloverLoan_G5(
+        FlashRolloverLoan_G4(
             _tellerV2, 
             _aaveAddressProvider
         )
@@ -37,14 +37,14 @@ contract FlashRolloverLoanOverride is FlashRolloverLoan_G5 {
         address _lenderCommitmentForwarder,
         address borrower,
         address principalToken,
-        FlashRolloverLoan_G5.AcceptCommitmentArgs calldata _commitmentArgs
+        FlashRolloverLoan_G4.AcceptCommitmentArgs calldata _commitmentArgs
     ) public returns (uint256 bidId_, uint256 acceptCommitmentAmount_) {
         return
             super._acceptCommitment(_lenderCommitmentForwarder,borrower, principalToken, _commitmentArgs);
     }
 }
 
-contract FlashRolloverLoan_G5_Unit_Test is Testable {
+contract FlashRolloverLoan_G4_Unit_Test is Testable {
     constructor() {}
 
     User private borrower;
@@ -57,8 +57,6 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
     WethMock wethMock;
     LenderCommitmentForwarderMock lenderCommitmentForwarder;
     MarketRegistryMock marketRegistryMock;
-
-    address smartCommitmentForwarderAddress;
 
     function setUp() public {
         borrower = new User();
@@ -127,10 +125,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         lenderCommitmentForwarder.setCommitment(0, commitment);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -202,10 +199,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         bytes32[] memory merkleProof = new bytes32[](1);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -277,10 +273,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         lenderCommitmentForwarder.setCommitment(0, commitment);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -368,10 +363,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         bytes32[] memory merkleProof = new bytes32[](1);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -455,10 +449,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         lenderCommitmentForwarder.setCommitment(0, commitment);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -537,10 +530,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         lenderCommitmentForwarder.setCommitment(0, commitment);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -619,10 +611,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         lenderCommitmentForwarder.setCommitment(0, commitment);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: principalAmount,
                 collateralAmount: 100,
                 collateralTokenId: 0,
@@ -715,10 +706,9 @@ contract FlashRolloverLoan_G5_Unit_Test is Testable {
 
         lenderCommitmentForwarder.setCommitment(0, commitment);
 
-        FlashRolloverLoan_G5.AcceptCommitmentArgs
-            memory commitmentArgs = FlashRolloverLoan_G5.AcceptCommitmentArgs({
+        FlashRolloverLoan_G4.AcceptCommitmentArgs
+            memory commitmentArgs = FlashRolloverLoan_G4.AcceptCommitmentArgs({
                 commitmentId: 0,
-                smartCommitmentAddress: smartCommitmentForwarderAddress,
                 principalAmount: newLoanPrincipalAmount,
                 collateralAmount: 0,
                 collateralTokenId: 0,
