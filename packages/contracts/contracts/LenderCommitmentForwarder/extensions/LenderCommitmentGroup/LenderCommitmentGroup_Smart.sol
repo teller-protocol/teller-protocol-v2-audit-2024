@@ -517,7 +517,7 @@ contract LenderCommitmentGroup_Smart is
 
             tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
 
-            totalPrincipalTokensRepaid += (amountDue - tokensToGiveToSender);
+            totalPrincipalTokensRepaid += amountDue;
         }
 
         //this will give collateral to the caller
