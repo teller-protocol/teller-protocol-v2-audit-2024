@@ -41,86 +41,19 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /*
-
-
-
-////----
-
-
-1. Use 50% forced max utilization ratio as initial game theory - have a global utilization limit and a user-signalled utilization limit (based on shares signalling) 
-
-2. When pool shares are burned, give the lender : [ their pct shares *  ( currentPrincipalTokens in contract, totalCollateralShares, totalInterestCollected)   ] and later, they can burn the collateral shares for any collateral tokens that are in the contract. 
-3. use noahs TToken contract as reference for ratios -> amt of tokens to get when committing 
-4.  Need price oracle bc we dont want to use maxPrincipalPerCollateral ratio as a static ideally 
-5. have an LTV ratio 
-
-Every time a lender deposits tokens, we can mint an equal amt of RepresentationToken
-
-
-// -- LIMITATIONS 
-1. neither the principal nor collateral token shall not have more than 18 decimals due to the way expansion is configured
-
-
-// -- EXITING 
-
-When exiting, a lender is burning X shares 
-
- -  We calculate the total equity value (Z) of the pool  multiplies by their pct of shares (S%)    (naive is just total committed princ tokens and interest , could maybe do better  )
-    - We are going to give the lender  (Z * S%) value.  The way we are going to give it to them is in a split of principal (P) and collateral tokens (C)  which are in the pool right now.   Similar to exiting a uni pool .   C tokens will only be in the pool if bad defaults happened.  
-    
-         NOTE:  We will know the price of C in terms of P due to the ratio of total P used for loans and total C used for loans 
-         
-         NOTE: if there are not enough P and C tokens in the pool to give the lender to equal a value of (Z * S%) then we revert . 
-
-// ---------
-
-
-// ISSUES 
-
-1. for 'overall pool value' calculations (for shares math) an active loans value should be treated as "principal+interest"
-   aka the amount that will be paid to the pool optimistically.  DONE 
-2. Redemption with ' the split' of principal and collateral is not ideal .  What would be more ideal is a "conversion auction' or a 'swap auction'. 
-    In this paradigm, any party can offer to give X principal tokens for the Y collateral tokens that are in the pool.  the auction lasts (1 hour?)  and this way it is always only principal tha is being withdrawn - far less risk of MEV attacker taking more C -- DONE 
-3. it is annoying that a bad default can cause a pool to have to totally exit and close ..this is a minor issue. maybe some form of Insurance can help resurrect a pool in this case, mayeb anyone can restore the health of the pool w a fn call.  
-    a. fix this by changing the shares logic so you do get more shares in this event (i dont think its possible) 
-    b. have a function that lets anyone donate principal tokens to make the pool whole again .  (refill underwater pools w insurance fund??)
-    c. lets pools expire and get unwound and withdrawn completely , make a new pool 
-
-4. build a function to do lender close loan 
-
-
-
-TODO: 
-A. Make a mental map of these subsystems, attack vectors, mitigaions 
-
-B. 
-
-
-// ----- 
-
-
-
-// TODO 
-
-
- 
- 2. consider adding PATHS to this for the oracle.. so the pair can be USDC to PNDC but use weth as intermediate 
- 4. tests 
-
-// ----
-
-
-
  
 
-If a lender puts up 50,000 originally, im able to withdraw all my deposits.  Everyone else is in the hole until a borrower repays a loan 
-If there isnt enough liquidity, you just cannot burn those shares. 
+ Each LenderCommitmentGroup SmartContract acts as its own Loan Commitment (for the SmartCommitmentForwarder) and acts as its own Lender in the Teller Protocol.
 
- 
+ Lender Users can deposit principal tokens in this contract and this will give them Share Tokens (LP tokens) representing their ownership in the liquidity pool of this contract.
+
+ Borrower Users can borrow principal token funds from this contract (via the SCF contract) by providing collateral tokens in the proper amount as specified by the rules of this smart contract.
+ These collateral tokens are then owned by this smart contract and are returned to the borrower via the Teller Protocol rules to the borrower if and only if the borrower repays principal and interest of the loan they took.
+
+ If the borrower defaults on a loan, for 24 hours a liquidation auction is automatically conducted by this smart contract in order to incentivize a liquidator to take the collateral tokens in exchange for principal tokens.
+
   
  
-Consider implementing eip-4626
-
 
 */
 
@@ -139,16 +72,14 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 public immutable UNISWAP_EXPANSION_FACTOR = 2**96;
 
-    uint256 public immutable EXCHANGE_RATE_EXPANSION_FACTOR = 1e36; //consider making this dynamic
+    uint256 public immutable EXCHANGE_RATE_EXPANSION_FACTOR = 1e36;  
 
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable TELLER_V2;
     address public immutable SMART_COMMITMENT_FORWARDER;
     address public immutable UNISWAP_V3_FACTORY;
     address public UNISWAP_V3_POOL;
-
-    // bool private _initialized;
-
+ 
     LenderCommitmentGroupShares public poolSharesToken;
 
     IERC20 public principalToken;
@@ -255,7 +186,7 @@ contract LenderCommitmentGroup_Smart is
 
         //in order for this to succeed, first, that SmartCommitmentForwarder needs to be THE trusted forwarder for the market
 
-        //approve this market as a forwarder
+         
         ITellerV2Context(TELLER_V2).approveMarketForwarder(
             _marketId,
             SMART_COMMITMENT_FORWARDER
@@ -285,8 +216,7 @@ contract LenderCommitmentGroup_Smart is
         onlyInitializing
         returns (address poolSharesToken_)
     {
-        // uint256 principalTokenDecimals = principalToken.decimals();
-
+      
         require(
             address(poolSharesToken) == address(0),
             "Pool shares already deployed"
@@ -295,7 +225,7 @@ contract LenderCommitmentGroup_Smart is
         poolSharesToken = new LenderCommitmentGroupShares(
             "PoolShares",
             "PSH",
-            18 //may want this to equal the decimals of principal token !?
+            18  
         );
 
         return address(poolSharesToken);
@@ -359,7 +289,7 @@ contract LenderCommitmentGroup_Smart is
         address _sharesRecipient
     ) external returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
-        //gives
+        
         principalToken.transferFrom(msg.sender, address(this), _amount);
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
@@ -389,11 +319,11 @@ contract LenderCommitmentGroup_Smart is
         uint256 _principalAmount,
         uint256 _collateralAmount,
         address _collateralTokenAddress,
-        uint256 _collateralTokenId, //not used
+        uint256 _collateralTokenId, 
         uint32 _loanDuration,
         uint16 _interestRate
     ) external onlySmartCommitmentForwarder whenNotPaused {
-        //consider putting these into less readonly fn calls
+        
         require(
             _collateralTokenAddress == address(collateralToken),
             "Mismatching collateral token"
@@ -420,8 +350,7 @@ contract LenderCommitmentGroup_Smart is
                 requiredCollateral,
             "Insufficient Borrower Collateral"
         );
-
-        //consider changing how this works
+ 
         principalToken.approve(address(TELLER_V2), _principalAmount);
 
         //do not have to spoof/forward as this contract is the lender !
@@ -451,7 +380,7 @@ contract LenderCommitmentGroup_Smart is
     ) external returns (uint256) {
        
 
-        //this reduces total supply
+        
         poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
@@ -505,8 +434,7 @@ contract LenderCommitmentGroup_Smart is
 
             totalPrincipalTokensRepaid += amountDue;
         } else {
-            //the loan will be not be made whole and will be short
-
+           
             uint256 tokensToGiveToSender = abs(_tokenAmountDifference);
 
             IERC20(principalToken).transferFrom(
@@ -541,8 +469,7 @@ contract LenderCommitmentGroup_Smart is
     /*
         This function will calculate the incentive amount (using a uniswap bonus plus a timer)
         of principal tokens that will be given to incentivize liquidating a loan 
-
-        Starts at 5000 and ticks down to -5000 
+ 
     */
     function getMinimumAmountDifferenceToCloseDefaultedLoan(
         uint256 _amountOwed,
@@ -559,8 +486,7 @@ contract LenderCommitmentGroup_Smart is
 
         uint256 secondsSinceDefaulted = block.timestamp -
             _loanDefaultedTimestamp;
-
-        //make this 10000 be a param in the constructor
+ 
         int256 incentiveMultiplier = int256(10000) -
             int256(secondsSinceDefaulted);
 
@@ -576,8 +502,7 @@ contract LenderCommitmentGroup_Smart is
     function abs(int x) private pure returns (uint) {
         return x >= 0 ? uint(x) : uint(-x);
     }
-
-    //this is expanded by 1e18
+ 
     function getCollateralRequiredForPrincipalAmount(uint256 _principalAmount)
         public
         view
@@ -591,7 +516,7 @@ contract LenderCommitmentGroup_Smart is
         return baseAmount.percent(loanToValuePercent);
     }
 
-    //remember that this result is expanded by UNISWAP_EXPANSION_FACTOR
+    //this result is expanded by UNISWAP_EXPANSION_FACTOR
     function _getUniswapV3TokenPairPrice(uint32 _twapInterval)
         internal
         view
@@ -605,14 +530,13 @@ contract LenderCommitmentGroup_Smart is
         return _getPriceFromSqrtX96(sqrtPriceX96);
     }
 
-    //remember that this result is expanded by UNISWAP_EXPANSION_FACTOR
+    //this result is expanded by UNISWAP_EXPANSION_FACTOR
     function _getPriceFromSqrtX96(uint160 _sqrtPriceX96)
         internal
         pure
         returns (uint256 price_)
     {
-        // uint160 sqrtPrice =  _sqrtPriceX96    ;
-
+       
         uint256 priceX96 = (uint256(_sqrtPriceX96) * uint256(_sqrtPriceX96)) /
             (2**96);
 
