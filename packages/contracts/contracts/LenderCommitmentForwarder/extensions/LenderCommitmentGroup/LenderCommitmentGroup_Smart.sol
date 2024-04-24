@@ -87,9 +87,8 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 marketId;
 
-    //this should be the net total principal tokens ,  lenderAdded - lenderWithdrawn
-    uint256 public totalPrincipalTokensCommitted;
-    uint256 public totalPrincipalTokensWithdrawn;
+    uint256 public totalPrincipalTokensCommitted; // total principal tokens ever added to the pool
+    uint256 public totalPrincipalTokensWithdrawn; // total principal tokens ever withdrawn from the pool
 
     uint256 public totalPrincipalTokensLended;
     uint256 public totalPrincipalTokensRepaid; //subtract this and the above to find total principal tokens outstanding for loans
