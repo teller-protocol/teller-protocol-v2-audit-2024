@@ -109,7 +109,7 @@ contract LenderCommitmentGroup_Smart is
     mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
 
-
+    int256 tokenDifferenceFromLiquidations;
    
 
     modifier onlySmartCommitmentForwarder() {
@@ -265,7 +265,7 @@ contract LenderCommitmentGroup_Smart is
         view
         returns (uint256 poolTotalEstimatedValue_)
     {
-        int256 poolTotalEstimatedValueSigned = int256(totalPrincipalTokensCommitted) + int256(totalInterestCollected) - int256(totalPrincipalTokensWithdrawn);
+        int256 poolTotalEstimatedValueSigned = int256(totalPrincipalTokensCommitted) + int256(totalInterestCollected) + int256(tokenDifferenceFromLiquidations) - int256(totalPrincipalTokensWithdrawn);
 
         //if the poolTotalEstimatedValue_ is less than 0, we treat it as 0.  
         poolTotalEstimatedValue_ = poolTotalEstimatedValueSigned > int256(0)
@@ -420,7 +420,7 @@ contract LenderCommitmentGroup_Smart is
                 amountDue + tokensToTakeFromSender
             );
 
-            totalInterestCollected += int256(tokensToTakeFromSender);
+            tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender);
             totalPrincipalTokensRepaid += amountDue;
         } else {
            
@@ -432,7 +432,7 @@ contract LenderCommitmentGroup_Smart is
                 amountDue - tokensToGiveToSender
             );
 
-            totalInterestCollected -= int256(tokensToGiveToSender);
+            tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
             totalPrincipalTokensRepaid += amountDue;
         }
 
@@ -745,8 +745,8 @@ contract LenderCommitmentGroup_Smart is
         view
         returns (uint256)
     {
-        int256 amountAvailable = (int256(totalPrincipalTokensCommitted) + 
-            totalInterestCollected).percent(liquidityThresholdPercent) -
+        int256 amountAvailable = (int256(totalPrincipalTokensCommitted) - int256(totalPrincipalTokensWithdrawn) + 
+            totalInterestCollected + tokenDifferenceFromLiquidations).percent(liquidityThresholdPercent) -
             int256(getTotalPrincipalTokensOutstandingInActiveLoans());
 
         return uint256(amountAvailable);
