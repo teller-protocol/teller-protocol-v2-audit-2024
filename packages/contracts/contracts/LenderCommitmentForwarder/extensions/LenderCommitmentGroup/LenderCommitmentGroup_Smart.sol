@@ -212,7 +212,7 @@ contract LenderCommitmentGroup_Smart is
         poolSharesToken_ = _deployPoolSharesToken();
     }
 
-    function _deployPoolSharesToken(  )
+    function _deployPoolSharesToken()
         internal
         onlyInitializing
         returns (address poolSharesToken_)
