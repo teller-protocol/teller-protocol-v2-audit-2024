@@ -41,19 +41,86 @@ import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 /*
+
+
+
+////----
+
+
+1. Use 50% forced max utilization ratio as initial game theory - have a global utilization limit and a user-signalled utilization limit (based on shares signalling) 
+
+2. When pool shares are burned, give the lender : [ their pct shares *  ( currentPrincipalTokens in contract, totalCollateralShares, totalInterestCollected)   ] and later, they can burn the collateral shares for any collateral tokens that are in the contract. 
+3. use noahs TToken contract as reference for ratios -> amt of tokens to get when committing 
+4.  Need price oracle bc we dont want to use maxPrincipalPerCollateral ratio as a static ideally 
+5. have an LTV ratio 
+
+Every time a lender deposits tokens, we can mint an equal amt of RepresentationToken
+
+
+// -- LIMITATIONS 
+1. neither the principal nor collateral token shall not have more than 18 decimals due to the way expansion is configured
+
+
+// -- EXITING 
+
+When exiting, a lender is burning X shares 
+
+ -  We calculate the total equity value (Z) of the pool  multiplies by their pct of shares (S%)    (naive is just total committed princ tokens and interest , could maybe do better  )
+    - We are going to give the lender  (Z * S%) value.  The way we are going to give it to them is in a split of principal (P) and collateral tokens (C)  which are in the pool right now.   Similar to exiting a uni pool .   C tokens will only be in the pool if bad defaults happened.  
+    
+         NOTE:  We will know the price of C in terms of P due to the ratio of total P used for loans and total C used for loans 
+         
+         NOTE: if there are not enough P and C tokens in the pool to give the lender to equal a value of (Z * S%) then we revert . 
+
+// ---------
+
+
+// ISSUES 
+
+1. for 'overall pool value' calculations (for shares math) an active loans value should be treated as "principal+interest"
+   aka the amount that will be paid to the pool optimistically.  DONE 
+2. Redemption with ' the split' of principal and collateral is not ideal .  What would be more ideal is a "conversion auction' or a 'swap auction'. 
+    In this paradigm, any party can offer to give X principal tokens for the Y collateral tokens that are in the pool.  the auction lasts (1 hour?)  and this way it is always only principal tha is being withdrawn - far less risk of MEV attacker taking more C -- DONE 
+3. it is annoying that a bad default can cause a pool to have to totally exit and close ..this is a minor issue. maybe some form of Insurance can help resurrect a pool in this case, mayeb anyone can restore the health of the pool w a fn call.  
+    a. fix this by changing the shares logic so you do get more shares in this event (i dont think its possible) 
+    b. have a function that lets anyone donate principal tokens to make the pool whole again .  (refill underwater pools w insurance fund??)
+    c. lets pools expire and get unwound and withdrawn completely , make a new pool 
+
+4. build a function to do lender close loan 
+
+
+
+TODO: 
+A. Make a mental map of these subsystems, attack vectors, mitigaions 
+
+B. 
+
+
+// ----- 
+
+
+
+// TODO 
+
+
+ 
+ 2. consider adding PATHS to this for the oracle.. so the pair can be USDC to PNDC but use weth as intermediate 
+ 4. tests 
+
+// ----
+
+
+
  
 
- Each LenderCommitmentGroup SmartContract acts as its own Loan Commitment (for the SmartCommitmentForwarder) and acts as its own Lender in the Teller Protocol.
+If a lender puts up 50,000 originally, im able to withdraw all my deposits.  Everyone else is in the hole until a borrower repays a loan 
+If there isnt enough liquidity, you just cannot burn those shares. 
 
- Lender Users can deposit principal tokens in this contract and this will give them Share Tokens (LP tokens) representing their ownership in the liquidity pool of this contract.
-
- Borrower Users can borrow principal token funds from this contract (via the SCF contract) by providing collateral tokens in the proper amount as specified by the rules of this smart contract.
- These collateral tokens are then owned by this smart contract and are returned to the borrower via the Teller Protocol rules to the borrower if and only if the borrower repays principal and interest of the loan they took.
-
- If the borrower defaults on a loan, for 24 hours a liquidation auction is automatically conducted by this smart contract in order to incentivize a liquidator to take the collateral tokens in exchange for principal tokens.
-
+ 
   
  
+Consider implementing eip-4626
+
 
 */
 
@@ -72,14 +139,16 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 public immutable UNISWAP_EXPANSION_FACTOR = 2**96;
 
-    uint256 public immutable EXCHANGE_RATE_EXPANSION_FACTOR = 1e36;  
+    uint256 public immutable EXCHANGE_RATE_EXPANSION_FACTOR = 1e36; //consider making this dynamic
 
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable TELLER_V2;
     address public immutable SMART_COMMITMENT_FORWARDER;
     address public immutable UNISWAP_V3_FACTORY;
     address public UNISWAP_V3_POOL;
- 
+
+    // bool private _initialized;
+
     LenderCommitmentGroupShares public poolSharesToken;
 
     IERC20 public principalToken;
@@ -87,19 +156,18 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 marketId;
 
- 
-    uint256 public totalPrincipalTokensCommitted; 
-    uint256 public totalPrincipalTokensWithdrawn;
+    //this should be the net total principal tokens ,  lenderAdded - lenderWithdrawn
+    uint256 public totalPrincipalTokensCommitted;
 
     uint256 public totalPrincipalTokensLended;
     uint256 public totalPrincipalTokensRepaid; //subtract this and the above to find total principal tokens outstanding for loans
 
-    
- 
+    uint256 public totalCollateralTokensEscrowedForLoans; // we use this in conjunction with totalPrincipalTokensLended for a psuedo TWAP price oracle of C tokens, used for exiting  .  Nice bc it is averaged over all of our relevant loans, not the current price.
+
     uint256 public totalInterestCollected;
 
     uint16 public liquidityThresholdPercent; //5000 is 50 pct  // enforce max of 10000
-    uint16 public collateralRatio; //the overcollateralization ratio, typically 80 pct
+    uint16 public loanToValuePercent; //the overcollateralization ratio, typically 80 pct
 
     uint32 public twapInterval;
     uint32 public maxLoanDuration;
@@ -107,7 +175,7 @@ contract LenderCommitmentGroup_Smart is
     uint16 public interestRateUpperBound;
 
 
-    //mapping(address => uint256) public principalTokensCommittedByLender;
+    mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
 
     //this excludes interest
@@ -139,6 +207,63 @@ contract LenderCommitmentGroup_Smart is
         _;
     }
 
+
+
+    event PoolInitialized(
+        address indexed principalTokenAddress,
+        address indexed collateralTokenAddress,
+        uint256 marketId,
+        uint32 maxLoanDuration,
+        uint16 interestRateLowerBound,
+        uint16 interestRateUpperBound,
+        uint16 liquidityThresholdPercent,
+        uint16 loanToValuePercent,
+        uint24 uniswapPoolFee,
+        uint32 twapInterval,
+        address poolSharesToken
+    );
+
+    event LenderAddedPrincipal(
+        address indexed lender,
+        uint256 amount,
+        uint256 sharesAmount,
+        address indexed sharesRecipient
+    );
+
+    event BorrowerAcceptedFunds(
+        address indexed borrower,
+        uint256 indexed bidId,
+        uint256 principalAmount,
+        uint256 collateralAmount,
+        uint32 loanDuration,
+        uint16 interestRate
+    );
+
+    event EarningsWithdrawn(
+        address indexed lender,
+        uint256 amountPoolSharesTokens,
+        uint256 principalTokensWithdrawn,
+        address indexed recipient
+    );
+
+
+    event DefaultedLoanLiquidated(
+        uint256 indexed bidId,
+        address indexed liquidator,
+        uint256 amountDue, 
+        int256 tokenAmountDifference 
+    );
+
+
+    event LoanRepaid(
+        uint256 indexed bidId,
+        address indexed repayer,
+        uint256 principalAmount,
+        uint256 interestAmount,
+        uint256 totalPrincipalRepaid,
+        uint256 totalInterestCollected
+    );
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         address _tellerV2,
@@ -163,7 +288,7 @@ contract LenderCommitmentGroup_Smart is
         uint16 _interestRateLowerBound,
         uint16 _interestRateUpperBound,
         uint16 _liquidityThresholdPercent, // When 100% , the entire pool can be drawn for lending.  When 80%, only 80% of the pool can be drawn for lending. 
-        uint16 _collateralRatio, //the required overcollateralization ratio.  10000 is 1:1 baseline , typically this is above 10000
+        uint16 _loanToValuePercent, //the required overcollateralization ratio.  10000 is 1:1 baseline , typically this is above 10000
         uint24 _uniswapPoolFee,
         uint32 _twapInterval
     ) external initializer returns (address poolSharesToken_) {
@@ -187,7 +312,7 @@ contract LenderCommitmentGroup_Smart is
 
         //in order for this to succeed, first, that SmartCommitmentForwarder needs to be THE trusted forwarder for the market
 
-         
+        //approve this market as a forwarder
         ITellerV2Context(TELLER_V2).approveMarketForwarder(
             _marketId,
             SMART_COMMITMENT_FORWARDER
@@ -199,17 +324,32 @@ contract LenderCommitmentGroup_Smart is
 
 
         
-        
+        require(interestRateUpperBound <= 10000, "invalid _interestRateUpperBound");
         require(interestRateLowerBound <= interestRateUpperBound, "invalid _interestRateLowerBound");
 
         require(_liquidityThresholdPercent <= 10000, "invalid _liquidityThresholdPercent"); 
 
         liquidityThresholdPercent = _liquidityThresholdPercent;
-        collateralRatio = _collateralRatio;
+        loanToValuePercent = _loanToValuePercent;
         twapInterval = _twapInterval;
 
         
         poolSharesToken_ = _deployPoolSharesToken();
+
+
+        emit PoolInitialized(
+            _principalTokenAddress,
+            _collateralTokenAddress,
+            _marketId,
+            _maxLoanDuration,
+            _interestRateLowerBound,
+            _interestRateUpperBound,
+            _liquidityThresholdPercent,
+            _loanToValuePercent,
+            _uniswapPoolFee,
+            _twapInterval,
+            poolSharesToken_
+        );
     }
 
     function _deployPoolSharesToken()
@@ -217,41 +357,20 @@ contract LenderCommitmentGroup_Smart is
         onlyInitializing
         returns (address poolSharesToken_)
     {
-      
+        // uint256 principalTokenDecimals = principalToken.decimals();
+
         require(
             address(poolSharesToken) == address(0),
             "Pool shares already deployed"
         );
 
-
-        (string memory name, string memory symbol ) = _generateTokenNameAndSymbol(
-            address(principalToken),
-            address(collateralToken)
-        );
-
         poolSharesToken = new LenderCommitmentGroupShares(
-            name,
-            symbol,
-            18  
+            "PoolShares",
+            "PSH",
+            18 //may want this to equal the decimals of principal token !?
         );
 
         return address(poolSharesToken);
-    }
-
-    function _generateTokenNameAndSymbol(address principalToken, address collateralToken) 
-    internal view 
-    returns (string memory name, string memory symbol) {
-        // Read the symbol of the principal token
-        string memory principalSymbol = ERC20(principalToken).symbol();
-        
-        // Read the symbol of the collateral token
-        string memory collateralSymbol = ERC20(collateralToken).symbol();
-        
-        // Combine the symbols to create the name
-        name = string(abi.encodePacked("GroupShares-", principalSymbol, "-", collateralSymbol));
-        
-        // Combine the symbols to create the symbol
-        symbol = string(abi.encodePacked("SHR-", principalSymbol, "-", collateralSymbol));
     }
 
     /**
@@ -260,18 +379,22 @@ contract LenderCommitmentGroup_Smart is
      */
 
     function sharesExchangeRate() public view virtual returns (uint256 rate_) {
-        
+        /*
+        Should get slightly less shares than principal tokens put in !! diluted by ratio of pools actual equity 
+       */
 
         uint256 poolTotalEstimatedValue = getPoolTotalEstimatedValue();
+        uint256 poolTotalEstimatedValuePlusInterest = poolTotalEstimatedValue +
+            totalInterestCollected;
 
-        if (poolSharesToken.totalSupply() == 0) {
+        if (poolTotalEstimatedValue == 0) {
             return EXCHANGE_RATE_EXPANSION_FACTOR; // 1 to 1 for first swap
         }
 
         rate_ =
-            (poolTotalEstimatedValue  *
+            (poolTotalEstimatedValuePlusInterest *
                 EXCHANGE_RATE_EXPANSION_FACTOR) /
-            poolSharesToken.totalSupply();
+            poolTotalEstimatedValue;
     }
 
     function sharesExchangeRateInverse()
@@ -286,14 +409,13 @@ contract LenderCommitmentGroup_Smart is
     }
 
     function getPoolTotalEstimatedValue()
-        public
+        internal
         view
         returns (uint256 poolTotalEstimatedValue_)
     {
-       
-         int256 poolTotalEstimatedValueSigned = int256(totalPrincipalTokensCommitted) 
-         + int256(totalInterestCollected)  + int256(tokenDifferenceFromLiquidations) 
-         - int256(totalPrincipalTokensWithdrawn);
+        int256 poolTotalEstimatedValueSigned = int256(
+            totalPrincipalTokensCommitted
+        ) + tokenDifferenceFromLiquidations;
 
         //if the poolTotalEstimatedValue_ is less than 0, we treat it as 0.  
         poolTotalEstimatedValue_ = poolTotalEstimatedValueSigned > int256(0)
@@ -309,16 +431,25 @@ contract LenderCommitmentGroup_Smart is
         address _sharesRecipient
     ) external returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
-        
+        //gives
         principalToken.transferFrom(msg.sender, address(this), _amount);
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
 
         totalPrincipalTokensCommitted += _amount;
-        //principalTokensCommittedByLender[msg.sender] += _amount;
+        principalTokensCommittedByLender[msg.sender] += _amount;
 
         //mint shares equal to _amount and give them to the shares recipient !!!
         poolSharesToken.mint(_sharesRecipient, sharesAmount_);
+
+        emit LenderAddedPrincipal( 
+
+            msg.sender,
+            _amount,
+            sharesAmount_,
+            _sharesRecipient
+
+         );
     }
 
     function _valueOfUnderlying(uint256 amount, uint256 rate)
@@ -339,11 +470,11 @@ contract LenderCommitmentGroup_Smart is
         uint256 _principalAmount,
         uint256 _collateralAmount,
         address _collateralTokenAddress,
-        uint256 _collateralTokenId, 
+        uint256 _collateralTokenId, //not used
         uint32 _loanDuration,
         uint16 _interestRate
     ) external onlySmartCommitmentForwarder whenNotPaused {
-        
+        //consider putting these into less readonly fn calls
         require(
             _collateralTokenAddress == address(collateralToken),
             "Mismatching collateral token"
@@ -357,7 +488,8 @@ contract LenderCommitmentGroup_Smart is
             getPrincipalAmountAvailableToBorrow() >= _principalAmount,
             "Invalid loan max principal"
         );
- 
+
+        require(isAllowedToBorrow(_borrower), "unauthorized borrow");
 
         //this is expanded by 10**18
         uint256 requiredCollateral = getCollateralRequiredForPrincipalAmount(
@@ -369,7 +501,8 @@ contract LenderCommitmentGroup_Smart is
                 requiredCollateral,
             "Insufficient Borrower Collateral"
         );
- 
+
+        //consider changing how this works
         principalToken.approve(address(TELLER_V2), _principalAmount);
 
         //do not have to spoof/forward as this contract is the lender !
@@ -378,7 +511,19 @@ contract LenderCommitmentGroup_Smart is
         totalPrincipalTokensLended += _principalAmount;
 
         activeBids[_bidId] = true; //bool for now
+      
+      
         //emit event
+        //we know the principal token and collateral token addresses since they are hard set in this contract 
+ 
+        emit BorrowerAcceptedFunds(  
+            _borrower,
+            _bidId,
+            _principalAmount,
+            _collateralAmount, 
+            _loanDuration,
+            _interestRate 
+         );
     }
 
     function _acceptBidWithRepaymentListener(uint256 _bidId) internal {
@@ -399,7 +544,7 @@ contract LenderCommitmentGroup_Smart is
     ) external returns (uint256) {
        
 
-        
+        //this reduces total supply
         poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
@@ -407,9 +552,16 @@ contract LenderCommitmentGroup_Smart is
             sharesExchangeRateInverse()
         );
 
-        totalPrincipalTokensWithdrawn += principalTokenValueToWithdraw;
+        totalPrincipalTokensCommitted -= principalTokenValueToWithdraw;
 
         principalToken.transfer(_recipient, principalTokenValueToWithdraw);
+
+        emit EarningsWithdrawn(
+            msg.sender,
+            _amountPoolSharesTokens,
+            principalTokenValueToWithdraw,
+            _recipient
+        );
 
         return principalTokenValueToWithdraw;
     }
@@ -438,6 +590,9 @@ contract LenderCommitmentGroup_Smart is
             "Insufficient tokenAmountDifference"
         );
 
+
+     
+
         if (_tokenAmountDifference > 0) {
             //this is used when the collateral value is higher than the principal (rare)
             //the loan will be completely made whole and our contract gets extra funds too
@@ -453,7 +608,8 @@ contract LenderCommitmentGroup_Smart is
 
             totalPrincipalTokensRepaid += amountDue;
         } else {
-           
+            //the loan will be not be made whole and will be short
+
             uint256 tokensToGiveToSender = abs(_tokenAmountDifference);
 
             IERC20(principalToken).transferFrom(
@@ -464,11 +620,19 @@ contract LenderCommitmentGroup_Smart is
 
             tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
 
-            totalPrincipalTokensRepaid += amountDue;
+            totalPrincipalTokensRepaid += (amountDue - tokensToGiveToSender);
         }
+ 
 
         //this will give collateral to the caller
         ITellerV2(TELLER_V2).lenderCloseLoanWithRecipient(_bidId, msg.sender);
+
+         emit DefaultedLoanLiquidated(
+            _bidId,
+            msg.sender,
+            amountDue, 
+            _tokenAmountDifference
+        );
     }
 
     function getAmountOwedForBid(uint256 _bidId, bool _includeInterest)
@@ -488,7 +652,8 @@ contract LenderCommitmentGroup_Smart is
     /*
         This function will calculate the incentive amount (using a uniswap bonus plus a timer)
         of principal tokens that will be given to incentivize liquidating a loan 
- 
+
+        Starts at 5000 and ticks down to -5000 
     */
     function getMinimumAmountDifferenceToCloseDefaultedLoan(
         uint256 _amountOwed,
@@ -505,8 +670,9 @@ contract LenderCommitmentGroup_Smart is
 
         uint256 secondsSinceDefaulted = block.timestamp -
             _loanDefaultedTimestamp;
- 
-        int256 incentiveMultiplier = int256(86400) -
+
+        //make this 10000 be a param in the constructor
+        int256 incentiveMultiplier = int256(10000) -
             int256(secondsSinceDefaulted);
 
         if (incentiveMultiplier < -10000) {
@@ -521,7 +687,8 @@ contract LenderCommitmentGroup_Smart is
     function abs(int x) private pure returns (uint) {
         return x >= 0 ? uint(x) : uint(-x);
     }
- 
+
+    //this is expanded by 1e18
     function getCollateralRequiredForPrincipalAmount(uint256 _principalAmount)
         public
         view
@@ -532,10 +699,10 @@ contract LenderCommitmentGroup_Smart is
             );
 
         //this is an amount of collateral
-        return baseAmount.percent(collateralRatio);
+        return baseAmount.percent(loanToValuePercent);
     }
 
-    //this result is expanded by UNISWAP_EXPANSION_FACTOR
+    //remember that this result is expanded by UNISWAP_EXPANSION_FACTOR
     function _getUniswapV3TokenPairPrice(uint32 _twapInterval)
         internal
         view
@@ -549,13 +716,14 @@ contract LenderCommitmentGroup_Smart is
         return _getPriceFromSqrtX96(sqrtPriceX96);
     }
 
-    //this result is expanded by UNISWAP_EXPANSION_FACTOR
+    //remember that this result is expanded by UNISWAP_EXPANSION_FACTOR
     function _getPriceFromSqrtX96(uint160 _sqrtPriceX96)
         internal
         pure
         returns (uint256 price_)
     {
-       
+        // uint160 sqrtPrice =  _sqrtPriceX96    ;
+
         uint256 priceX96 = (uint256(_sqrtPriceX96) * uint256(_sqrtPriceX96)) /
             (2**96);
 
@@ -706,9 +874,31 @@ contract LenderCommitmentGroup_Smart is
         //can use principal amt to increment amt paid back!! nice for math .
         totalPrincipalTokensRepaid += principalAmount;
         totalInterestCollected += interestAmount;
+
+
+        emit LoanRepaid(
+            _bidId,
+            repayer,
+            principalAmount,
+            interestAmount,
+            totalPrincipalTokensRepaid,
+            totalInterestCollected
+        );
     }
 
-  
+    function getAverageWeightedPriceForCollateralTokensPerPrincipalTokens()
+        public
+        view
+        returns (uint256)
+    {
+        if (totalPrincipalTokensLended <= 0) {
+            return 0;
+        }
+
+        return
+            totalCollateralTokensEscrowedForLoans / totalPrincipalTokensLended;
+    }
+
     function getTotalPrincipalTokensOutstandingInActiveLoans()
         public
         view
@@ -756,13 +946,11 @@ contract LenderCommitmentGroup_Smart is
     //this is always between 0 and 10000
     function getPoolUtilizationRatio() public view returns (uint16) {
 
-        if (getPoolTotalEstimatedValue() == 0) {
+        if (totalPrincipalTokensCommitted == 0) {
             return 0;
         }
 
-        return uint16(  Math.min(   
-           getTotalPrincipalTokensOutstandingInActiveLoans()  * 10000  / 
-           getPoolTotalEstimatedValue() , 10000  ));
+        return uint16(  Math.min(  (totalPrincipalTokensLended - totalPrincipalTokensRepaid)  * 10000  /   totalPrincipalTokensCommitted , 10000  ));
     }   
 
  
@@ -774,17 +962,20 @@ contract LenderCommitmentGroup_Smart is
         return address(principalToken);
     }
 
-   
+    function isAllowedToBorrow(address borrower) public view returns (bool) {
+        return true;
+    }
 
     function getPrincipalAmountAvailableToBorrow()
         public
         view
         returns (uint256)
-    {     
+    {
+        int256 amountAvailable = int256(totalPrincipalTokensCommitted) -
+            int256(getTotalPrincipalTokensOutstandingInActiveLoans()) +
+            tokenDifferenceFromLiquidations;
 
-            return  ( uint256( getPoolTotalEstimatedValue() )).percent(liquidityThresholdPercent) -
-            getTotalPrincipalTokensOutstandingInActiveLoans() ;
-     
+        return uint256(amountAvailable).percent(liquidityThresholdPercent);
     }
 
     /**
