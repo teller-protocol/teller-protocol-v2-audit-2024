@@ -949,9 +949,10 @@ contract TellerV2 is
         address loanRepaymentListener = repaymentListenerForBid[_bidId];
 
         if (loanRepaymentListener != address(0)) {
+            require(gasleft() >= 40000, "Insufficient gas");  //fixes the 63/64 remaining issue
             try
                 ILoanRepaymentListener(loanRepaymentListener).repayLoanCallback{
-                    gas: 80000
+                    gas: 40000
                 }( //limit gas costs to prevent lender griefing repayments
                     _bidId,
                     _msgSenderForMarket(bid.marketplaceId),
