@@ -398,14 +398,14 @@ contract LenderCommitmentGroup_Smart is
         address _recipient
     ) external returns (uint256) {
        
-
-        
-        poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
+ 
 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
             _amountPoolSharesTokens,
             sharesExchangeRateInverse()
         );
+
+        poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
 
         totalPrincipalTokensWithdrawn += principalTokenValueToWithdraw;
 
