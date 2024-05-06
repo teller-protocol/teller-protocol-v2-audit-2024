@@ -269,9 +269,9 @@ contract LenderCommitmentGroup_Smart is
         }
 
         rate_ =
-            (poolTotalEstimatedValue  *
-                EXCHANGE_RATE_EXPANSION_FACTOR) /
-            poolSharesToken.totalSupply();
+            MathUpgradeable.mulDiv(poolTotalEstimatedValue , 
+                EXCHANGE_RATE_EXPANSION_FACTOR ,
+                  poolSharesToken.totalSupply() );
     }
 
     function sharesExchangeRateInverse()
@@ -330,7 +330,7 @@ contract LenderCommitmentGroup_Smart is
             return 0;
         }
 
-        value_ = (amount * EXCHANGE_RATE_EXPANSION_FACTOR) / rate;
+        value_ = MathUpgradeable.mulDiv(amount ,  EXCHANGE_RATE_EXPANSION_FACTOR   ,  rate ) ;
     }
 
     function acceptFundsForAcceptBid(
