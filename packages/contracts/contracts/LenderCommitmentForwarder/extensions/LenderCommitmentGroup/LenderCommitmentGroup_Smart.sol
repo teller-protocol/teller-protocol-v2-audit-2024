@@ -358,14 +358,13 @@ contract LenderCommitmentGroup_Smart is
             "Invalid loan max principal"
         );
  
-
-        //this is expanded by 10**18
+ 
         uint256 requiredCollateral = getCollateralRequiredForPrincipalAmount(
             _principalAmount
         );
 
-        require(
-            (_collateralAmount * STANDARD_EXPANSION_FACTOR) >=
+        require(    
+             _collateralAmount   >=
                 requiredCollateral,
             "Insufficient Borrower Collateral"
         );
