@@ -282,6 +282,24 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
         }
     }
 
+        /**
+     * @notice Withdraws deposited collateral from the created escrow of a bid that has been CLOSED after being defaulted.
+     * @param _bidId The id of the bid to withdraw collateral for.
+     */
+      function lenderClaimCollateralWithRecipient(uint256 _bidId, address _collateralRecipient) external onlyTellerV2 {
+        if (isBidCollateralBacked(_bidId)) {
+            BidState bidState = tellerV2.getBidState(_bidId);
+
+            require(
+                bidState == BidState.CLOSED,
+                "Loan has not been liquidated"
+            );
+
+            _withdraw(_bidId, _collateralRecipient);
+            emit CollateralClaimed(_bidId);
+        }
+    }
+
     /**
      * @notice Sends the deposited collateral to a liquidator of a bid.
      * @notice Can only be called by the protocol.
