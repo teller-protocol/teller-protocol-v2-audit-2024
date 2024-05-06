@@ -33,6 +33,7 @@ import { ILoanRepaymentListener } from "../../../interfaces/ILoanRepaymentListen
 
 import { ILoanRepaymentCallbacks } from "../../../interfaces/ILoanRepaymentCallbacks.sol";
 
+import { IEscrowVault } from "../../../interfaces/IEscrowVault.sol";
 import { ILenderCommitmentGroup } from "../../../interfaces/ILenderCommitmentGroup.sol";
 import { Payment } from "../../../TellerV2Storage.sol";
 
@@ -708,6 +709,20 @@ contract LenderCommitmentGroup_Smart is
         totalInterestCollected += interestAmount;
     }
 
+
+    /*
+        If principaltokens get stuck in the escrow vault for any reason, anyone may
+        call this function to move them from that vault in to this contract 
+    */
+    function withdrawFromEscrowVault ( uint256 _amount ) public  {
+
+
+        address _escrowVault = ITellerV2(TELLER_V2).getEscrowVault();
+
+        IEscrowVault(_escrowVault).withdraw(address(principalToken), _amount );
+
+    }
+ 
   
     function getTotalPrincipalTokensOutstandingInActiveLoans()
         public
