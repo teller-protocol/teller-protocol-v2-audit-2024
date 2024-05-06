@@ -167,9 +167,8 @@ contract LenderCommitmentGroup_Smart is
         uint24 _uniswapPoolFee,
         uint32 _twapInterval
     ) external initializer returns (address poolSharesToken_) {
-        // require(!_initialized,"already initialized");
-        // _initialized = true;
-
+       
+        __Ownable_init();
         __Pausable_init();
 
         principalToken = IERC20(_principalTokenAddress);
