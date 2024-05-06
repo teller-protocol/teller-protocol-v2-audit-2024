@@ -759,10 +759,15 @@ contract LenderCommitmentGroup_Smart is
         if (getPoolTotalEstimatedValue() == 0) {
             return 0;
         }
+ 
 
-        return uint16(  Math.min(   
-           getTotalPrincipalTokensOutstandingInActiveLoans()  * 10000  / 
-           getPoolTotalEstimatedValue() , 10000  ));
+        return uint16(Math.min(
+
+           MathUpgradeable.mulDiv(  getTotalPrincipalTokensOutstandingInActiveLoans() , 10000 , 
+           (getPoolTotalEstimatedValue().percent(liquidityThresholdPercent) ) )
+           
+           , 10000));
+
     }   
 
  
