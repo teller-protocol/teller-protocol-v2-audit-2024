@@ -584,13 +584,16 @@ contract LenderCommitmentGroup_Smart is
             (int56[] memory tickCumulatives, ) = IUniswapV3Pool(UNISWAP_V3_POOL)
                 .observe(secondsAgos);
 
-            // tick(imprecise as it's an integer) to price
-            sqrtPriceX96 = TickMath.getSqrtRatioAtTick(
-                int24(
-                    (tickCumulatives[1] - tickCumulatives[0]) /
-                        int32(twapInterval)
-                )
-            );
+        
+
+              int56 tickCumulativesDelta = tickCumulatives[1] - tickCumulatives[0];
+              int24 arithmeticMeanTick = int24(tickCumulativesDelta / int32(twapInterval));
+               //// Always round to negative infinity
+              if (tickCumulativesDelta < 0 && (tickCumulativesDelta % int32(twapInterval) != 0)) arithmeticMeanTick--;
+             
+               sqrtPriceX96 = TickMath.getSqrtRatioAtTick(arithmeticMeanTick);
+
+
         }
     }
 
