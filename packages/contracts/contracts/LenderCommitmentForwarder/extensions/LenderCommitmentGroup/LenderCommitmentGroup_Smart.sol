@@ -39,7 +39,7 @@ import { Payment } from "../../../TellerV2Storage.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 /*
  
 
@@ -73,6 +73,8 @@ contract LenderCommitmentGroup_Smart is
     uint256 public immutable UNISWAP_EXPANSION_FACTOR = 2**96;
 
     uint256 public immutable EXCHANGE_RATE_EXPANSION_FACTOR = 1e36;  
+
+    using SafeERC20 for IERC20;
 
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable TELLER_V2;
@@ -310,7 +312,7 @@ contract LenderCommitmentGroup_Smart is
     ) external returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
         
-        principalToken.transferFrom(msg.sender, address(this), _amount);
+        principalToken.safeTransferFrom(msg.sender, address(this), _amount);
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
 
@@ -409,7 +411,7 @@ contract LenderCommitmentGroup_Smart is
 
         totalPrincipalTokensWithdrawn += principalTokenValueToWithdraw;
 
-        principalToken.transfer(_recipient, principalTokenValueToWithdraw);
+        principalToken.safeTransfer(_recipient, principalTokenValueToWithdraw);
 
         return principalTokenValueToWithdraw;
     }
@@ -443,7 +445,7 @@ contract LenderCommitmentGroup_Smart is
             //the loan will be completely made whole and our contract gets extra funds too
             uint256 tokensToTakeFromSender = abs(_tokenAmountDifference);
 
-            IERC20(principalToken).transferFrom(
+            IERC20(principalToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 amountDue + tokensToTakeFromSender
@@ -456,7 +458,7 @@ contract LenderCommitmentGroup_Smart is
            
             uint256 tokensToGiveToSender = abs(_tokenAmountDifference);
 
-            IERC20(principalToken).transferFrom(
+            IERC20(principalToken).safeTransferFrom(
                 msg.sender,
                 address(this),
                 amountDue - tokensToGiveToSender
