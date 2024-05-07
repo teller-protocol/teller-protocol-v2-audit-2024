@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ICollateralManager.sol";
 import { PaymentType, PaymentCycleType } from "./libraries/V2Calculations.sol";
 import "./interfaces/ILenderManager.sol";
+import "./interfaces/ICallbackEmitter.sol";
 
 enum BidState {
     NONEXISTENT,
@@ -162,4 +163,10 @@ abstract contract TellerV2Storage_G6 is TellerV2Storage_G5 {
     mapping(uint256 => address) public repaymentListenerForBid;
 }
 
-abstract contract TellerV2Storage is TellerV2Storage_G6 {}
+abstract contract TellerV2Storage_G7 is TellerV2Storage_G6 {
+    // Address of the lender manager contract
+    ICallbackEmitter public callbackEmitter;
+}
+
+
+abstract contract TellerV2Storage is TellerV2Storage_G7 {}
