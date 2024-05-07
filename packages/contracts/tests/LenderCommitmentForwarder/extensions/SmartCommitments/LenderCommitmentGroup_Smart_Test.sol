@@ -702,7 +702,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
  
       uint16 poolUtilizationRatio = lenderCommitmentGroupSmart.getPoolUtilizationRatio( 
-           
+            0
          );
 
 
@@ -710,7 +710,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
         // submit bid 
         uint16 minInterestRate = lenderCommitmentGroupSmart.getMinInterestRate( 
-           
+           0
          );
 
 
