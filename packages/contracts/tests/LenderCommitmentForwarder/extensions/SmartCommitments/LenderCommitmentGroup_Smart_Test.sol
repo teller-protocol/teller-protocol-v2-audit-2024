@@ -149,9 +149,11 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         vm.prank(address(lender));
         principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
 
+        uint256 minAmountOut = 1000000;
+
         vm.prank(address(lender));
         uint256 sharesAmount_ = lenderCommitmentGroupSmart
-            .addPrincipalToCommitmentGroup(1000000, address(borrower));
+            .addPrincipalToCommitmentGroup(1000000, address(borrower), minAmountOut);
 
         uint256 expectedSharesAmount = 1000000;
 
@@ -176,12 +178,15 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         //lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(1000000);
         //lenderCommitmentGroupSmart.set_totalInterestCollected(2000000);
 
+        uint256 minAmountOut = 500000;
+
+
         vm.prank(address(lender));
         principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
 
         vm.prank(address(lender));
         uint256 sharesAmount_ = lenderCommitmentGroupSmart
-            .addPrincipalToCommitmentGroup(1000000, address(borrower));
+            .addPrincipalToCommitmentGroup(1000000, address(borrower),minAmountOut);
 
         uint256 expectedSharesAmount = 500000;
 
@@ -204,14 +209,14 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         lenderCommitmentGroupSmart.set_totalInterestCollected(1e6 * 1);
         lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(1e6 * 1);
 
-        
+        uint256 minAmountOut = 500000;
 
         vm.prank(address(lender));
         principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
 
         vm.prank(address(lender));
         uint256 sharesAmount_ = lenderCommitmentGroupSmart
-            .addPrincipalToCommitmentGroup(1000000, address(borrower));
+            .addPrincipalToCommitmentGroup(1000000, address(borrower), minAmountOut);
 
         uint256 expectedSharesAmount = 1000000;
 
@@ -253,11 +258,14 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         );
 
         vm.prank(address(lender));
+
+        uint256 minAmountOut = 1000000;
         
          uint256 receivedPrincipalTokens 
           = lenderCommitmentGroupSmart.burnSharesToWithdrawEarnings(
                 sharesAmount,
-                address(lender)
+                address(lender),
+                minAmountOut
             );
 
         uint256 expectedReceivedPrincipalTokens = 1000000; // the orig amt !
@@ -297,12 +305,14 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             sharesAmount
         );
 
+        uint256 minAmountOut = 900000;
         vm.prank(address(lender));
         
          uint256 receivedPrincipalTokens 
           = lenderCommitmentGroupSmart.burnSharesToWithdrawEarnings(
                 sharesAmount,
-                address(lender)
+                address(lender),
+                minAmountOut
             );
 
         uint256 expectedReceivedPrincipalTokens = 1000000; // the orig amt !
@@ -332,6 +342,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
         vm.prank(address(lender));
 
+        uint256 minAmountOut = 500000;
+
         uint256 sharesAmount = 500000;
         //should have all of the shares at this point
         lenderCommitmentGroupSmart.mock_mintShares(
@@ -344,7 +356,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             uint256 receivedPrincipalTokens
          = lenderCommitmentGroupSmart.burnSharesToWithdrawEarnings(
                 sharesAmount,
-                address(lender)
+                address(lender),
+                minAmountOut
             );
 
         uint256 expectedReceivedPrincipalTokens = 500000; // the orig amt !

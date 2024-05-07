@@ -306,13 +306,16 @@ contract LenderCommitmentGroup_Smart is
     */
     function addPrincipalToCommitmentGroup(
         uint256 _amount,
-        address _sharesRecipient
+        address _sharesRecipient,
+        uint256 _minSharesAmountOut
     ) external returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
         
         principalToken.transferFrom(msg.sender, address(this), _amount);
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
+
+        require( sharesAmount_ >= _minSharesAmountOut, "Invalid: Min Shares AmountOut" );
 
         totalPrincipalTokensCommitted += _amount;
         //principalTokensCommittedByLender[msg.sender] += _amount;
@@ -395,10 +398,9 @@ contract LenderCommitmentGroup_Smart is
     */
     function burnSharesToWithdrawEarnings(
         uint256 _amountPoolSharesTokens,
-        address _recipient
+        address _recipient,
+        uint256 _minAmountOut
     ) external returns (uint256) {
-       
-
         
         poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
 
@@ -410,6 +412,8 @@ contract LenderCommitmentGroup_Smart is
         totalPrincipalTokensWithdrawn += principalTokenValueToWithdraw;
 
         principalToken.transfer(_recipient, principalTokenValueToWithdraw);
+
+        require( principalTokenValueToWithdraw >=  _minAmountOut ,"Invalid: Min Amount Out");
 
         return principalTokenValueToWithdraw;
     }
