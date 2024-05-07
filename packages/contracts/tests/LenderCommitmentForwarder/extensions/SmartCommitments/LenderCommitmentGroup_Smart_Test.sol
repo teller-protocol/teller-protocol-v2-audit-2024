@@ -529,7 +529,9 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
        vm.prank(address(liquidator));
        principalToken.approve(address(lenderCommitmentGroupSmart), 1e18);
 
-       lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(2000);
+       int256 minAmountDifference = 2000;
+
+       lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(minAmountDifference);
 
         int256 tokenAmountDifference = 4000;
         vm.prank(address(liquidator));
@@ -540,7 +542,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
         uint256 updatedBalance = principalToken.balanceOf(address(liquidator));
 
-        int256 expectedDifference = int256(amountOwed) + tokenAmountDifference;
+        int256 expectedDifference = int256(amountOwed) + minAmountDifference;
 
         assertEq(originalBalance - updatedBalance , uint256(expectedDifference), "unexpected tokenDifferenceFromLiquidations");
 
