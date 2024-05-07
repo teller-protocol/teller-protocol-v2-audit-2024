@@ -638,8 +638,8 @@ contract LenderCommitmentGroup_Smart is
         bool principalTokenIsToken0
     ) internal pure returns (uint256 collateralTokensAmountToMatchValue) {
         if (principalTokenIsToken0) {
-            //token 1 to token 0 ?
-            uint256 worstCasePairPrice = Math.min(
+           
+            uint256 worstCasePairPrice = Math.max(
                 pairPriceWithTwap,
                 pairPriceImmediate
             );
@@ -649,8 +649,8 @@ contract LenderCommitmentGroup_Smart is
                 worstCasePairPrice //if this is lower, collateral tokens amt will be higher
             );
         } else {
-            //token 0 to token 1 ?
-            uint256 worstCasePairPrice = Math.max(
+            
+            uint256 worstCasePairPrice = Math.min(
                 pairPriceWithTwap,
                 pairPriceImmediate
             );
