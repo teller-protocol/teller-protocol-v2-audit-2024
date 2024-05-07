@@ -11,3 +11,4 @@ abstract contract ILenderManager is IERC721Upgradeable {
      */
     function registerLoan(uint256 _bidId, address _newLender) external virtual;
 }
+

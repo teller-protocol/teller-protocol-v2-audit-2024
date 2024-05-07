@@ -12,13 +12,13 @@ import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
 // Interfaces
 import "./interfaces/IMarketRegistry.sol";
-import "./interfaces/IReputationManager.sol";
+//import "./interfaces/IReputationManager.sol";
 import "./interfaces/ITellerV2.sol";
 import { Collateral } from "./interfaces/escrow/ICollateralEscrowV1.sol";
 import "./interfaces/IEscrowVault.sol";
 
 import { ILoanRepaymentCallbacks } from "./interfaces/ILoanRepaymentCallbacks.sol";
-import "./interfaces/ILoanRepaymentListener.sol";
+
 
 // Libraries
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -180,19 +180,23 @@ contract TellerV2 is
      * @notice Initializes the proxy.
      * @param _protocolFee The fee collected by the protocol for loan processing.
      * @param _marketRegistry The address of the market registry contract for the protocol.
-     * @param _reputationManager The address of the reputation manager contract.
+    
      * @param _lenderCommitmentForwarder The address of the lender commitment forwarder contract.
      * @param _collateralManager The address of the collateral manager contracts.
+   
      * @param _lenderManager The address of the lender manager contract for loans on the protocol.
+     * @param _escrowVault The address of the lender manager contract for loans on the protocol.
+     * @param _callbackEmitter The address of the contract that forwards callbacks .
      */
     function initialize(
         uint16 _protocolFee,
         address _marketRegistry,
-        address _reputationManager,
+      //  address _reputationManager, //deprecated 
         address _lenderCommitmentForwarder,
         address _collateralManager,
         address _lenderManager,
-        address _escrowVault
+        address _escrowVault,
+        address _callbackEmitter
     ) external initializer {
         __ProtocolFee_init(_protocolFee);
 
@@ -210,11 +214,11 @@ contract TellerV2 is
         );
         marketRegistry = IMarketRegistry(_marketRegistry);
 
-        require(
+       /* require(
             _reputationManager.isContract(),
             "ReputationManager must be a contract"
         );
-        reputationManager = IReputationManager(_reputationManager);
+        reputationManager = IReputationManager(_reputationManager);*/
 
         require(
             _collateralManager.isContract(),
@@ -224,12 +228,12 @@ contract TellerV2 is
 
         _setLenderManager(_lenderManager);
         _setEscrowVault(_escrowVault);
+        _setCallbackEmitter(_callbackEmitter);
     }
 
-    /* function setEscrowVault(address _escrowVault) external reinitializer(9) {
-        _setEscrowVault(_escrowVault);
-    }
-    */
+     function setCallbackEmitter(address _callbackEmitter) external reinitializer(10) onlyOwner {
+        _setCallbackEmitter(_callbackEmitter);
+    }  
 
     function _setLenderManager(address _lenderManager)
         internal
@@ -246,6 +250,12 @@ contract TellerV2 is
         require(_escrowVault.isContract(), "EscrowVault must be a contract");
         escrowVault = IEscrowVault(_escrowVault);
     }
+
+    function _setCallbackEmitter(address _callbackEmitter) internal onlyInitializing {
+        require(_callbackEmitter.isContract(), "CallbackEmitter must be a contract");
+        callbackEmitter = ICallbackEmitter(_callbackEmitter);
+    }
+
 
     /**
      * @notice Gets the metadataURI for a bidId.
@@ -857,10 +867,10 @@ contract TellerV2 is
         Bid storage bid = bids[_bidId];
         uint256 paymentAmount = _payment.principal + _payment.interest;
 
-        RepMark mark = reputationManager.updateAccountReputation(
+     /*   RepMark mark = reputationManager.updateAccountReputation(
             bid.borrower,
             _bidId
-        );
+        );*/
 
         // Check if we are sending a payment or amount remaining
         if (paymentAmount >= _owedAmount) {
@@ -892,9 +902,9 @@ contract TellerV2 is
         bid.loanDetails.lastRepaidTimestamp = uint32(block.timestamp);
 
         // If the loan is paid in full and has a mark, we should update the current reputation
-        if (mark != RepMark.Good) {
+       /* if (mark != RepMark.Good) {
             reputationManager.updateAccountReputation(bid.borrower, _bidId);
-        }
+        }*/
     }
 
 
@@ -949,20 +959,19 @@ contract TellerV2 is
         address loanRepaymentListener = repaymentListenerForBid[_bidId];
 
         if (loanRepaymentListener != address(0)) {
-            try
-                ILoanRepaymentListener(loanRepaymentListener).repayLoanCallback{
-                    gas: 80000
-                }( //limit gas costs to prevent lender griefing repayments
+            try ICallbackEmitter(callbackEmitter).sendRepayLoanCallback(
+                    loanRepaymentListener,
                     _bidId,
                     _msgSenderForMarket(bid.marketplaceId),
                     _payment.principal,
                     _payment.interest
-                )
+            ) 
             {} catch {}
         }
     }
 
 
+ 
 
 
     /**
