@@ -349,7 +349,7 @@ contract LenderCommitmentGroup_Smart is
             "Mismatching collateral token"
         );
         //the interest rate must be at least as high has the commitment demands. The borrower can use a higher interest rate although that would not be beneficial to the borrower.
-        require(_interestRate >= getMinInterestRate(), "Invalid interest rate");
+        require(_interestRate >= getMinInterestRate(_principalAmount), "Invalid interest rate");
         //the loan duration must be less than the commitment max loan duration. The lender who made the commitment expects the money to be returned before this window.
         require(_loanDuration <= maxLoanDuration, "Invalid loan max duration");
 
@@ -754,21 +754,23 @@ contract LenderCommitmentGroup_Smart is
     }
 
     //this is always between 0 and 10000
-    function getPoolUtilizationRatio() public view returns (uint16) {
+    function getPoolUtilizationRatio(uint256 activeLoansAmountDelta ) public view returns (uint16) {
 
         if (getPoolTotalEstimatedValue() == 0) {
             return 0;
         }
 
         return uint16(  Math.min(   
-           getTotalPrincipalTokensOutstandingInActiveLoans()  * 10000  / 
+           (getTotalPrincipalTokensOutstandingInActiveLoans() + activeLoansAmountDelta)  * 10000  / 
            getPoolTotalEstimatedValue() , 10000  ));
     }   
 
  
-    function getMinInterestRate() public view returns (uint16) {
-        return interestRateLowerBound + uint16( uint256(interestRateUpperBound-interestRateLowerBound).percent(getPoolUtilizationRatio()) );
+    function getMinInterestRate(uint256 amountDelta) public view returns (uint16) {
+        return interestRateLowerBound + uint16( uint256(interestRateUpperBound-interestRateLowerBound).percent(getPoolUtilizationRatio(amountDelta )) );
     }
+ 
+
 
     function getPrincipalTokenAddress() external view returns (address) {
         return address(principalToken);
