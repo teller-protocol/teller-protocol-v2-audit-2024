@@ -540,7 +540,7 @@ contract LenderCommitmentGroup_Smart is
     function _getUniswapV3TokenPairQuote(
 
         uint32 _twapInterval, 
-        bool _immediate,
+       
         uint256 _baseAmount, 
         address _baseToken, 
         address _quoteToken
@@ -551,23 +551,8 @@ contract LenderCommitmentGroup_Smart is
     {
 
 
-        int24 tick;
-
-
-         if ( _immediate) {
-             uint32[] memory secondsAgos = new uint32[](1); 
-            secondsAgos[0] = 1; // to (now)
-
-
-            (int56[] memory tickCumulatives, ) = IUniswapV3Pool(UNISWAP_V3_POOL)
-                .observe(secondsAgos);
-
-                //is this correct ?????
-            int24 tick =  int24(
-                     tickCumulatives[0] 
-                );
-
-        } else {
+        
+ 
             uint32[] memory secondsAgos = new uint32[](2);
             secondsAgos[0] = twapInterval+1; // from (before)
             secondsAgos[1] = 1; // to (now)
@@ -581,8 +566,6 @@ contract LenderCommitmentGroup_Smart is
                 );
 
             
-            
-        }
 
         _amountQuoteToken = OracleLibrary.getQuoteAtTick(
                 tick ,
@@ -659,32 +642,18 @@ contract LenderCommitmentGroup_Smart is
     function _calculateCollateralTokensAmountEquivalentToPrincipalTokens(
         uint256 principalTokenAmountValue
     ) internal view returns (uint256 collateralTokensAmountToMatchValue) {
-        //same concept as zeroforone
-      //  (address token0, ) = _getPoolTokens();
+      
+        uint256 pairQuoteWithTwap = _getUniswapV3TokenPairQuote(twapInterval,  principalTokenAmountValue, address(principalToken), address(collateralToken) );
+        uint256 pairQuoteImmediate = _getUniswapV3TokenPairQuote(1,  principalTokenAmountValue, address(principalToken), address(collateralToken));
 
-       // bool principalTokenIsToken0 = (address(principalToken) == token0);
-
-        uint256 pairQuoteWithTwap = _getUniswapV3TokenPairQuote(twapInterval, false, principalTokenAmountValue, address(principalToken), address(collateralToken) );
-        uint256 pairQuoteImmediate = _getUniswapV3TokenPairQuote(twapInterval,true, principalTokenAmountValue, address(principalToken), address(collateralToken));
-
-
-        /*uint256 pairPriceWithTwap = _getUniswapV3TokenPairPrice(twapInterval, principalTokenAmountValue, address(principalToken), address(collateralToken) );
-        uint256 pairPriceImmediate = _getUniswapV3TokenPairPrice(0, principalTokenAmountValue, address(principalToken), address(collateralToken));
-
-        return
-            _getCollateralTokensAmountEquivalentToPrincipalTokens(
-                principalTokenAmountValue,
-                pairPriceWithTwap,
-                pairPriceImmediate,
-                principalTokenIsToken0
-            );*/
+ 
 
               uint256 worstCaseQuote = Math.max(
                 pairQuoteWithTwap,
                 pairQuoteImmediate
             );
 
-              collateralTokensAmountToMatchValue = worstCaseQuote;
+         collateralTokensAmountToMatchValue = worstCaseQuote;
     }
 
     /*
