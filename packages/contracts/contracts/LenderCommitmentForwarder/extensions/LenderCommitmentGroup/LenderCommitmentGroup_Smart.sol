@@ -22,6 +22,7 @@ import "../../../interfaces/uniswap/IUniswapV3Factory.sol";
 import "../../../libraries/uniswap/TickMath.sol";
 import "../../../libraries/uniswap/FixedPoint96.sol";
 import "../../../libraries/uniswap/FullMath.sol";
+import "../../../libraries/uniswap/OracleLibrary.sol";
 
 import "./LenderCommitmentGroupShares.sol";
 
@@ -536,21 +537,63 @@ contract LenderCommitmentGroup_Smart is
     }
 
     //this result is expanded by UNISWAP_EXPANSION_FACTOR
-    function _getUniswapV3TokenPairPrice(uint32 _twapInterval)
+    function _getUniswapV3TokenPairQuote(
+
+        uint32 _twapInterval, 
+        bool _immediate,
+        uint256 _baseAmount, 
+        address _baseToken, 
+        address _quoteToken
+    )
         internal
         view
-        returns (uint256)
+        returns (uint256 _amountQuoteToken)
     {
-        // represents the square root of the price of token1 in terms of token0
 
-        uint160 sqrtPriceX96 = getSqrtTwapX96(_twapInterval);
 
-        //this output is the price ratio expanded by 1e18
-        return _getPriceFromSqrtX96(sqrtPriceX96);
+        int24 tick;
+
+
+         if ( _immediate) {
+             uint32[] memory secondsAgos = new uint32[](1); 
+            secondsAgos[0] = 1; // to (now)
+
+
+            (int56[] memory tickCumulatives, ) = IUniswapV3Pool(UNISWAP_V3_POOL)
+                .observe(secondsAgos);
+
+                //is this correct ?????
+            int24 tick =  int24(
+                     tickCumulatives[0] 
+                );
+
+        } else {
+            uint32[] memory secondsAgos = new uint32[](2);
+            secondsAgos[0] = twapInterval+1; // from (before)
+            secondsAgos[1] = 1; // to (now)
+
+            (int56[] memory tickCumulatives, ) = IUniswapV3Pool(UNISWAP_V3_POOL)
+                .observe(secondsAgos);
+
+            int24 tick =  int24(
+                    (tickCumulatives[1] - tickCumulatives[0]) /
+                        int32(twapInterval)
+                );
+
+            
+            
+        }
+
+        _amountQuoteToken = OracleLibrary.getQuoteAtTick(
+                tick ,
+                uint128(_baseAmount),   //make sure this doesnt cause an issue  -- this casting 
+                _baseToken,
+                _quoteToken
+            );
     }
 
     //this result is expanded by UNISWAP_EXPANSION_FACTOR
-    function _getPriceFromSqrtX96(uint160 _sqrtPriceX96)
+ /*   function _getPriceFromSqrtX96(uint256 _sqrtPriceX96)
         internal
         pure
         returns (uint256 price_)
@@ -564,13 +607,13 @@ contract LenderCommitmentGroup_Smart is
         // It's not a USD price
         price_ = priceX96;
     }
-
+*/
     // ---- TWAP
 
-    function getSqrtTwapX96(uint32 twapInterval)
+   /* function getSqrtTwapX96(uint32 twapInterval, uint256 baseAmount, address baseToken, address quoteToken)
         public
         view
-        returns (uint160 sqrtPriceX96)
+        returns (uint256 sqrtPriceX96)
     {
         if (twapInterval == 0) {
             // return the current price if twapInterval == 0
@@ -585,15 +628,20 @@ contract LenderCommitmentGroup_Smart is
                 .observe(secondsAgos);
 
             // tick(imprecise as it's an integer) to price
-            sqrtPriceX96 = TickMath.getSqrtRatioAtTick(
+            sqrtPriceX96 = OracleLibrary.getQuoteAtTick(
                 int24(
                     (tickCumulatives[1] - tickCumulatives[0]) /
                         int32(twapInterval)
-                )
+                ),
+                uint128(baseAmount),   //make sure this doesnt cause an issue  -- this casting 
+                baseToken,
+                quoteToken
             );
         }
     }
+*/
 
+/*
     function _getPoolTokens()
         internal
         view
@@ -603,6 +651,7 @@ contract LenderCommitmentGroup_Smart is
         token0 = IUniswapV3Pool(UNISWAP_V3_POOL).token0();
         token1 = IUniswapV3Pool(UNISWAP_V3_POOL).token1();
     }
+*/
 
     // -----
 
@@ -611,12 +660,16 @@ contract LenderCommitmentGroup_Smart is
         uint256 principalTokenAmountValue
     ) internal view returns (uint256 collateralTokensAmountToMatchValue) {
         //same concept as zeroforone
-        (address token0, ) = _getPoolTokens();
+      //  (address token0, ) = _getPoolTokens();
 
-        bool principalTokenIsToken0 = (address(principalToken) == token0);
+       // bool principalTokenIsToken0 = (address(principalToken) == token0);
 
-        uint256 pairPriceWithTwap = _getUniswapV3TokenPairPrice(twapInterval);
-        uint256 pairPriceImmediate = _getUniswapV3TokenPairPrice(0);
+        uint256 pairQuoteWithTwap = _getUniswapV3TokenPairQuote(twapInterval, false, principalTokenAmountValue, address(principalToken), address(collateralToken) );
+        uint256 pairQuoteImmediate = _getUniswapV3TokenPairQuote(twapInterval,true, principalTokenAmountValue, address(principalToken), address(collateralToken));
+
+
+        /*uint256 pairPriceWithTwap = _getUniswapV3TokenPairPrice(twapInterval, principalTokenAmountValue, address(principalToken), address(collateralToken) );
+        uint256 pairPriceImmediate = _getUniswapV3TokenPairPrice(0, principalTokenAmountValue, address(principalToken), address(collateralToken));
 
         return
             _getCollateralTokensAmountEquivalentToPrincipalTokens(
@@ -624,14 +677,21 @@ contract LenderCommitmentGroup_Smart is
                 pairPriceWithTwap,
                 pairPriceImmediate,
                 principalTokenIsToken0
+            );*/
+
+              uint256 worstCaseQuote = Math.max(
+                pairQuoteWithTwap,
+                pairQuoteImmediate
             );
+
+              collateralTokensAmountToMatchValue = worstCaseQuote;
     }
 
     /*
         Dev Note: pairPriceWithTwap and pairPriceImmediate are expanded by UNISWAP_EXPANSION_FACTOR
 
     */
-    function _getCollateralTokensAmountEquivalentToPrincipalTokens(
+  /*  function _getCollateralTokensAmountEquivalentToPrincipalTokens(
         uint256 principalTokenAmountValue,
         uint256 pairPriceWithTwap,
         uint256 pairPriceImmediate,
@@ -660,7 +720,7 @@ contract LenderCommitmentGroup_Smart is
                 worstCasePairPrice //if this is lower, collateral tokens amt will be higher
             );
         }
-    }
+    }*/
 
     //note: the price is still expanded by UNISWAP_EXPANSION_FACTOR
     function token0ToToken1(uint256 amountToken0, uint256 priceToken1PerToken0)
