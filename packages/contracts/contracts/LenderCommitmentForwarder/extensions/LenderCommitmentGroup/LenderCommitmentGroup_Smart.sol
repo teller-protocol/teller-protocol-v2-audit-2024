@@ -423,7 +423,7 @@ contract LenderCommitmentGroup_Smart is
         uint256 _bidId,
         int256 _tokenAmountDifference
     ) public bidIsActiveForGroup(_bidId) {
-        uint256 amountDue = getAmountOwedForBid(_bidId, false);
+        uint256 amountDue = getAmountOwedForBid(_bidId, true);
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
             .getLoanDefaultTimestamp(_bidId);
@@ -451,7 +451,7 @@ contract LenderCommitmentGroup_Smart is
 
             tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender);
 
-            totalPrincipalTokensRepaid += amountDue;
+           
         } else {
            
             uint256 tokensToGiveToSender = abs(_tokenAmountDifference);
@@ -464,7 +464,7 @@ contract LenderCommitmentGroup_Smart is
 
             tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
 
-            totalPrincipalTokensRepaid += amountDue;
+           
         }
 
         //this will give collateral to the caller
