@@ -210,6 +210,9 @@ contract LenderCommitmentGroup_Smart is
 
         
         poolSharesToken_ = _deployPoolSharesToken();
+
+        //mitigate donation attacks 
+        poolSharesToken.mint(address(0),1e5);
     }
 
     function _deployPoolSharesToken()
