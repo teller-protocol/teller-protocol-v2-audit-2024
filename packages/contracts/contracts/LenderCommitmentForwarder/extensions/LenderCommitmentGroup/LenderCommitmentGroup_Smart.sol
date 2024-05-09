@@ -310,12 +310,22 @@ contract LenderCommitmentGroup_Smart is
     ) external returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
         
+        uint256 principalTokenBalanceBefore = principalToken.balanceOf(address(this));
+
         principalToken.transferFrom(msg.sender, address(this), _amount);
+ 
+        uint256 principalTokenBalanceAfter = principalToken.balanceOf(address(this));
+ 
+        require( principalTokenBalanceAfter == principalTokenBalanceBefore + _amount, "Token balance was not added properly" );
+
+
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
 
+
+
         totalPrincipalTokensCommitted += _amount;
-        //principalTokensCommittedByLender[msg.sender] += _amount;
+        
 
         //mint shares equal to _amount and give them to the shares recipient !!!
         poolSharesToken.mint(_sharesRecipient, sharesAmount_);
