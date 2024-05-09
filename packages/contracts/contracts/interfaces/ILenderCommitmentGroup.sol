@@ -2,9 +2,10 @@
 pragma solidity ^0.8.0;
 
 interface ILenderCommitmentGroup {
-    function initialize(
+    function initialize(   
         address _principalTokenAddress,
-        address _collateralTokenAddress,
+        address _collateralTokenAddress,  
+        uint256 _initialPrincipalDepositAmount ,
         uint256 _marketId,
         uint32 _maxLoanDuration,
         uint16 _interestRateLowerBound,

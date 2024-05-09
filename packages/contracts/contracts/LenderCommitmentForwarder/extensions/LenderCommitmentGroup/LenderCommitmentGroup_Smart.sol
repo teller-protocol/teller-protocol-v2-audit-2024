@@ -156,8 +156,10 @@ contract LenderCommitmentGroup_Smart is
         
     */
     function initialize(
-        address _principalTokenAddress,
+     
+        address _principalTokenAddress,        
         address _collateralTokenAddress,
+        uint256 _initialPrincipalDepositAmount ,
         uint256 _marketId,
         uint32 _maxLoanDuration,
         uint16 _interestRateLowerBound,
@@ -165,7 +167,8 @@ contract LenderCommitmentGroup_Smart is
         uint16 _liquidityThresholdPercent, // When 100% , the entire pool can be drawn for lending.  When 80%, only 80% of the pool can be drawn for lending. 
         uint16 _collateralRatio, //the required overcollateralization ratio.  10000 is 1:1 baseline , typically this is above 10000
         uint24 _uniswapPoolFee,
-        uint32 _twapInterval
+        uint32 _twapInterval 
+       
     ) external initializer returns (address poolSharesToken_) {
         // require(!_initialized,"already initialized");
         // _initialized = true;
@@ -210,6 +213,10 @@ contract LenderCommitmentGroup_Smart is
 
         
         poolSharesToken_ = _deployPoolSharesToken();
+ 
+        addPrincipalToCommitmentGroup(_initialPrincipalDepositAmount,msg.sender);
+
+        require( ERC20(poolSharesToken).totalSupply() > 1000 * 1e18, "Must initialize pool with 1000 shares" );
     }
 
     function _deployPoolSharesToken()
@@ -307,7 +314,7 @@ contract LenderCommitmentGroup_Smart is
     function addPrincipalToCommitmentGroup(
         uint256 _amount,
         address _sharesRecipient
-    ) external returns (uint256 sharesAmount_) {
+    ) public returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
         
         principalToken.transferFrom(msg.sender, address(this), _amount);
