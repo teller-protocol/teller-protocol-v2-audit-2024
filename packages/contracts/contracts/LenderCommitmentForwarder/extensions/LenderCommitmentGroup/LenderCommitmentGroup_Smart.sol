@@ -222,37 +222,16 @@ contract LenderCommitmentGroup_Smart is
             address(poolSharesToken) == address(0),
             "Pool shares already deployed"
         );
-
-
-        (string memory name, string memory symbol ) = _generateTokenNameAndSymbol(
-            address(principalToken),
-            address(collateralToken)
-        );
-
+ 
         poolSharesToken = new LenderCommitmentGroupShares(
-            name,
-            symbol,
+            "LenderGroupShares",
+            "SHR",
             18  
         );
 
         return address(poolSharesToken);
-    }
+    } 
 
-    function _generateTokenNameAndSymbol(address principalToken, address collateralToken) 
-    internal view 
-    returns (string memory name, string memory symbol) {
-        // Read the symbol of the principal token
-        string memory principalSymbol = ERC20(principalToken).symbol();
-        
-        // Read the symbol of the collateral token
-        string memory collateralSymbol = ERC20(collateralToken).symbol();
-        
-        // Combine the symbols to create the name
-        name = string(abi.encodePacked("GroupShares-", principalSymbol, "-", collateralSymbol));
-        
-        // Combine the symbols to create the symbol
-        symbol = string(abi.encodePacked("SHR-", principalSymbol, "-", collateralSymbol));
-    }
 
     /**
      * @notice This determines the number of shares you get for depositing principal tokens and the number of principal tokens you receive for burning shares
