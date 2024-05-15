@@ -480,9 +480,7 @@ contract LenderCommitmentGroup_Smart is
         Payment memory amountOwedPayment = ITellerV2(TELLER_V2)
             .calculateAmountOwed(_bidId, block.timestamp);
 
-        amountOwed_ = _includeInterest
-            ? amountOwedPayment.principal + amountOwedPayment.interest
-            : amountOwedPayment.principal;
+        amountOwed_ = _bidId.loanDetails.principal;
     }
 
     /*
@@ -506,7 +504,7 @@ contract LenderCommitmentGroup_Smart is
         uint256 secondsSinceDefaulted = block.timestamp -
             _loanDefaultedTimestamp;
  
-        int256 incentiveMultiplier = int256(10000) -
+        int256 incentiveMultiplier = int256(86400) -
             int256(secondsSinceDefaulted);
 
         if (incentiveMultiplier < -10000) {
