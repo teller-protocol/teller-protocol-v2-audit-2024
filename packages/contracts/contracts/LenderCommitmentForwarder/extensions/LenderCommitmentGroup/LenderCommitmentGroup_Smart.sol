@@ -423,7 +423,7 @@ contract LenderCommitmentGroup_Smart is
         uint256 _bidId,
         int256 _tokenAmountDifference
     ) public bidIsActiveForGroup(_bidId) {
-        uint256 amountDue = getAmountOwedForBid(_bidId, false);
+        uint256 amountDue = _bidId.loanDetails.principal;
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
             .getLoanDefaultTimestamp(_bidId);
@@ -480,7 +480,9 @@ contract LenderCommitmentGroup_Smart is
         Payment memory amountOwedPayment = ITellerV2(TELLER_V2)
             .calculateAmountOwed(_bidId, block.timestamp);
 
-        amountOwed_ = _bidId.loanDetails.principal;
+        amountOwed_ = _includeInterest
+            ? amountOwedPayment.principal + amountOwedPayment.interest
+            : amountOwedPayment.principal;
     }
 
     /*
