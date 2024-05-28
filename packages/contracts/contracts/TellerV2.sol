@@ -754,21 +754,8 @@ contract TellerV2 is
         address sender = _msgSenderForMarket(bid.marketplaceId);
         require(sender == bid.lender, "only lender can close loan");
 
-        /*
-
-
-          address collateralManagerForBid = address(_getCollateralManagerForBid(_bidId)); 
-
-          if( collateralManagerForBid == address(collateralManagerV2) ){
-             ICollateralManagerV2(collateralManagerForBid).lenderClaimCollateral(_bidId,_collateralRecipient);
-          }else{
-             require( _collateralRecipient == address(bid.lender));
-             ICollateralManager(collateralManagerForBid).lenderClaimCollateral(_bidId );
-          }
-          
-          */
-
-        collateralManager.lenderClaimCollateral(_bidId);
+      
+        collateralManager.lenderClaimCollateralWithRecipient(_bidId, _collateralRecipient);
 
         emit LoanClosed(_bidId);
     }
