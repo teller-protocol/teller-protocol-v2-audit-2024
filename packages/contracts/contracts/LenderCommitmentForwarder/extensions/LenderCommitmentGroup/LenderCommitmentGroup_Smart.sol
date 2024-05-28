@@ -84,6 +84,7 @@ contract LenderCommitmentGroup_Smart is
 
     IERC20 public principalToken;
     IERC20 public collateralToken;
+    uint24 public uniswapPoolFee;
 
     uint256 marketId;
 
@@ -230,6 +231,7 @@ contract LenderCommitmentGroup_Smart is
 
         principalToken = IERC20(_principalTokenAddress);
         collateralToken = IERC20(_collateralTokenAddress);
+        uniswapPoolFee = _uniswapPoolFee;
 
         UNISWAP_V3_POOL = IUniswapV3Factory(UNISWAP_V3_FACTORY).getPool(
             _principalTokenAddress,
@@ -835,6 +837,9 @@ contract LenderCommitmentGroup_Smart is
         return totalPrincipalTokensLended - totalPrincipalTokensRepaid;
     }
 
+
+
+
     function getCollateralTokenAddress() external view returns (address) {
         return address(collateralToken);
     }
@@ -883,7 +888,7 @@ contract LenderCommitmentGroup_Smart is
            getPoolTotalEstimatedValue() , 10000  ));
     }   
 
- 
+    
     function getMinInterestRate() public view returns (uint16) {
         return interestRateLowerBound + uint16( uint256(interestRateUpperBound-interestRateLowerBound).percent(getPoolUtilizationRatio()) );
     }
