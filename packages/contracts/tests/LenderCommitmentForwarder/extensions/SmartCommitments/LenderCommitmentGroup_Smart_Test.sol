@@ -107,6 +107,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             _uniswapPoolFee,
             _twapInterval
         );
+
+        lenderCommitmentGroupSmart.mock_setFirstDepositMade(true);
     }
 
     function test_initialize() public {

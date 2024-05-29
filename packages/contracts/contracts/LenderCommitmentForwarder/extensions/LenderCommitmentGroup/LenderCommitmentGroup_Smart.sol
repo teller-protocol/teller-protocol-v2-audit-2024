@@ -127,6 +127,8 @@ contract LenderCommitmentGroup_Smart is
     // maybe it is possible to get rid of this storage slot and calculate it from totalPrincipalTokensRepaid, totalPrincipalTokensLended
     int256 tokenDifferenceFromLiquidations;
 
+    bool public firstDepositMade;
+
 
    
 
@@ -374,6 +376,9 @@ contract LenderCommitmentGroup_Smart is
         uint256 _minSharesAmountOut
     ) external returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
+
+       
+
         
  
         uint256 principalTokenBalanceBefore = principalToken.balanceOf(address(this));
@@ -411,6 +416,12 @@ contract LenderCommitmentGroup_Smart is
 
         require( sharesAmount_ >= _minSharesAmountOut, "Invalid: Min Shares AmountOut" );
  
+         if(!firstDepositMade){
+            require(msg.sender == owner(), "Owner must initialize the pool with a deposit first.");
+            require( sharesAmount_>= 1e6, "Initial shares amount must be atleast 1e6" );
+
+            firstDepositMade = true;
+        }
     }
 
     function _valueOfUnderlying(uint256 amount, uint256 rate)
