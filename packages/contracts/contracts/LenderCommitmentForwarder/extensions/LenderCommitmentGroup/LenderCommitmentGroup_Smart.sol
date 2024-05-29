@@ -566,10 +566,10 @@ contract LenderCommitmentGroup_Smart is
             "Insufficient tokenAmountDifference"
         );
 
-        if (_tokenAmountDifference > 0) {
+        if (minAmountDifference > 0) {
             //this is used when the collateral value is higher than the principal (rare)
             //the loan will be completely made whole and our contract gets extra funds too
-            uint256 tokensToTakeFromSender = abs(_tokenAmountDifference);
+            uint256 tokensToTakeFromSender = abs(minAmountDifference);
 
             IERC20(principalToken).transferFrom(
                 msg.sender,
@@ -582,7 +582,7 @@ contract LenderCommitmentGroup_Smart is
             //totalPrincipalTokensRepaid += amountDue;
         } else {
            
-            uint256 tokensToGiveToSender = abs(_tokenAmountDifference);
+            uint256 tokensToGiveToSender = abs(minAmountDifference);
 
             IERC20(principalToken).transferFrom(
                 msg.sender,
