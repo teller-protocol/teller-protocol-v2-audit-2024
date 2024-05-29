@@ -564,7 +564,10 @@ contract LenderCommitmentGroup_Smart is
         uint256 _bidId,
         int256 _tokenAmountDifference
     ) public bidIsActiveForGroup(_bidId) {
-        uint256 amountDue = getAmountOwedForBid(_bidId, true);
+        
+        //use original principal amount as amountDue
+        (,,,, uint256 amountDue, , ,  )
+         = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
             .getLoanDefaultTimestamp(_bidId);
