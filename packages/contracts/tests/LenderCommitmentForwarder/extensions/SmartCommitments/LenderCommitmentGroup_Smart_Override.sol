@@ -98,7 +98,10 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
         mockMaxPrincipalPerCollateralAmount = amt;
     }
 
+    function mock_setFirstDepositMade(bool made) public {
+        firstDepositMade = made;
 
+    }
 
     function sharesExchangeRate() public override view returns (uint256 rate_) {
         
