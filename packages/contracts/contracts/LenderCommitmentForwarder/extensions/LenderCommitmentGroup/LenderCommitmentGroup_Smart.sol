@@ -71,6 +71,8 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 public immutable STANDARD_EXPANSION_FACTOR = 1e18;
 
+    uint256 public immutable MIN_TWAP_INTERVAL = 3;
+
     uint256 public immutable UNISWAP_EXPANSION_FACTOR = 2**96;
 
     uint256 public immutable EXCHANGE_RATE_EXPANSION_FACTOR = 1e36;  
@@ -246,6 +248,7 @@ contract LenderCommitmentGroup_Smart is
             _uniswapPoolFee
         );
 
+        require(_twapInterval > MIN_TWAP_INTERVAL, "Invalid TWAP Interval");
         require(UNISWAP_V3_POOL != address(0), "Invalid uniswap pool address");
 
         marketId = _marketId;
