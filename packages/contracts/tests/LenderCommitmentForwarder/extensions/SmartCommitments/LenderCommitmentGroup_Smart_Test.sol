@@ -946,7 +946,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
                 );
 
        
-        uint256 expectedAmount = 4500;  
+        uint256 expectedAmount = 9000;  
 
         assertEq(
             amountCollateral,
@@ -974,7 +974,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
                 );
 
        
-        uint256 expectedAmount = 9000;  
+        uint256 expectedAmount = 18000;  
 
         assertEq(
             amountCollateral,
@@ -1002,7 +1002,36 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
                 );
 
        
-        uint256 expectedAmount = 1;  
+        uint256 expectedAmount = 9000;  
+
+        assertEq(
+            amountCollateral,
+            expectedAmount,
+            "Unexpected getCollateralTokensPricePerPrincipalTokens"
+        );
+    }
+
+
+   function test_getCollateralTokensAmountEquivalentToPrincipalTokens_scenarioD() public {
+         
+        initialize_group_contract();
+
+        uint256 principalTokenAmountValue = 9000;
+        uint256 pairPriceWithTwap = 60000 * 2**96;
+        uint256 pairPriceImmediate =  2**96;
+        bool principalTokenIsToken0 = false;
+ 
+        
+        uint256 amountCollateral = lenderCommitmentGroupSmart
+            .super_getCollateralTokensAmountEquivalentToPrincipalTokens(
+                principalTokenAmountValue,
+                pairPriceWithTwap,
+                pairPriceImmediate,
+                principalTokenIsToken0                
+                );
+
+       
+        uint256 expectedAmount = 9000;  
 
         assertEq(
             amountCollateral,
