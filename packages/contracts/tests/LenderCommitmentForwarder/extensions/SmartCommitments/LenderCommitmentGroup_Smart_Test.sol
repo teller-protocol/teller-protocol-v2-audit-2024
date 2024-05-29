@@ -252,6 +252,13 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             sharesAmount
         );
 
+
+      vm.prank(address(lender));
+
+        lenderCommitmentGroupSmart.prepareSharesForWithdraw(sharesAmount);
+
+        vm.warp(1000);
+
         vm.prank(address(lender));
         
          uint256 receivedPrincipalTokens 
@@ -295,7 +302,13 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         lenderCommitmentGroupSmart.mock_mintShares(
             address(lender),
             sharesAmount
-        );
+        );  
+
+         vm.prank(address(lender));
+
+        lenderCommitmentGroupSmart.prepareSharesForWithdraw(sharesAmount);
+
+        vm.warp(1000);
 
         vm.prank(address(lender));
         
@@ -338,6 +351,14 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             address(lender),
             sharesAmount
         );
+
+
+
+        vm.prank(address(lender));
+
+        lenderCommitmentGroupSmart.prepareSharesForWithdraw(sharesAmount);
+
+        vm.warp(1000);
 
         vm.prank(address(lender));
     
