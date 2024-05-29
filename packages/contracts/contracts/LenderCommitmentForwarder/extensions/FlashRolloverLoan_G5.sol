@@ -208,6 +208,11 @@ contract FlashRolloverLoan_G5 is IFlashLoanSimpleReceiver, IFlashRolloverLoan_G4
             );
         }
 
+         IERC20Upgradeable(_flashToken).approve(
+            address(POOL()),
+            0
+        );
+
         emit RolloverLoanComplete(
             _rolloverArgs.borrower,
             _rolloverArgs.loanId,
@@ -245,6 +250,11 @@ contract FlashRolloverLoan_G5 is IFlashLoanSimpleReceiver, IFlashRolloverLoan_G4
             _repayAmount
         );
         TELLER_V2.repayLoanFull(_bidId);
+
+        IERC20Upgradeable(_principalToken).approve(
+            address(TELLER_V2),
+            0
+        );
 
         uint256 fundsAfterRepayment = IERC20Upgradeable(_principalToken)
             .balanceOf(address(this));
