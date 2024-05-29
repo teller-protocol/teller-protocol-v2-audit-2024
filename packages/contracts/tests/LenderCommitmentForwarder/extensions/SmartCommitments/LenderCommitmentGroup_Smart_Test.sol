@@ -801,7 +801,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
 
  
       uint16 poolUtilizationRatio = lenderCommitmentGroupSmart.getPoolUtilizationRatio( 
-           
+            0
          );
 
 
@@ -809,7 +809,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
 
         // submit bid 
         uint16 minInterestRate = lenderCommitmentGroupSmart.getMinInterestRate( 
-           
+           0
          );
 
 
