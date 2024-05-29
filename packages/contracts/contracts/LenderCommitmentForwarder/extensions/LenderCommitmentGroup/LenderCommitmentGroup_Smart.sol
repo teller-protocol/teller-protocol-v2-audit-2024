@@ -725,8 +725,8 @@ contract LenderCommitmentGroup_Smart is
                 .slot0();
         } else {
             uint32[] memory secondsAgos = new uint32[](2);
-            secondsAgos[0] = twapInterval; // from (before)
-            secondsAgos[1] = 0; // to (now)
+            secondsAgos[0] = twapInterval+1; // from (before)
+            secondsAgos[1] = 1; // to (now)
 
             (int56[] memory tickCumulatives, ) = IUniswapV3Pool(UNISWAP_V3_POOL)
                 .observe(secondsAgos);
