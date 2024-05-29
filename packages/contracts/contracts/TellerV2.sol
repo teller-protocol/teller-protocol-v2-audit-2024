@@ -1092,6 +1092,10 @@ contract TellerV2 is
             dueDate + defaultDuration + _additionalDelay;
     }
 
+    function getEscrowVault() external view returns(address){
+        return address(escrowVault);
+    }
+
     function getBidState(uint256 _bidId)
         external
         view
