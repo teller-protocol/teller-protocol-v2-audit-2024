@@ -710,8 +710,9 @@ contract LenderCommitmentGroup_Smart is
         returns (uint256 price_)
     {
        
-        uint256 priceX96 = (uint256(_sqrtPriceX96) * uint256(_sqrtPriceX96)) /
-            (2**96);
+         
+
+        uint256 priceX96 = FullMath.mulDiv(uint256(_sqrtPriceX96), uint256(_sqrtPriceX96), (2**96) );
 
         // sqrtPrice is in X96 format so we scale it down to get the price
         // Also note that this price is a relative price between the two tokens in the pool
