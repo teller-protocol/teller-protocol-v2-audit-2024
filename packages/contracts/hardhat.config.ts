@@ -38,6 +38,9 @@ import semver from 'semver'
 
 const NODE_VERSION = 'v16'
 if (!semver.satisfies(process.version, NODE_VERSION))
+  throw new Error(
+    `Incorrect NodeJS version being used (${process.version}). Expected: ${NODE_VERSION}`
+  )
 
 config()
 
