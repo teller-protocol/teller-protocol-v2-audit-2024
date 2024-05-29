@@ -69,8 +69,8 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
         return super.getMinimumAmountDifferenceToCloseDefaultedLoan(_amountOwed,_loanDefaultedTimestamp);
     }
 
-    function getAmountOwedForBid(uint256 _bidId, bool _includeInterest)
-     public override view returns (uint256){
+    function _getAmountOwedForBid(uint256 _bidId )
+     internal override view returns (uint256){
         return mockAmountOwed;
 
      }

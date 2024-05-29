@@ -566,8 +566,9 @@ contract LenderCommitmentGroup_Smart is
     ) public bidIsActiveForGroup(_bidId) {
         
         //use original principal amount as amountDue
-        (,,,, uint256 amountDue, , ,  )
-         = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
+
+        uint256 amountDue = _getAmountOwedForBid(_bidId);
+       
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
             .getLoanDefaultTimestamp(_bidId);
@@ -623,21 +624,20 @@ contract LenderCommitmentGroup_Smart is
         );
     }
 
-    function getAmountOwedForBid(uint256 _bidId, bool _includeInterest)
-        public
+    
+
+    function _getAmountOwedForBid(uint256 _bidId )
+        internal
         view
         virtual
-        returns (uint256 amountOwed_)
+        returns (uint256 amountDue)
     {
-        Payment memory amountOwedPayment = ITellerV2(TELLER_V2)
-            .calculateAmountOwed(_bidId, block.timestamp);
-
-        amountOwed_ = _includeInterest
-            ? amountOwedPayment.principal + amountOwedPayment.interest
-            : amountOwedPayment.principal;
+        (,,,, amountDue, , ,  )
+         = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
 
        
     }
+    
 
     /*
         This function will calculate the incentive amount (using a uniswap bonus plus a timer)
