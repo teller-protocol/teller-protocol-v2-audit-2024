@@ -420,6 +420,10 @@ contract LenderCommitmentGroup_Smart is
         require(poolSharesPreparedToWithdrawForLender[msg.sender] >= _amountPoolSharesTokens,"Shares not prepared for withdraw");
         require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - WITHDRAW_DELAY_TIME_SECONDS,"Shares not prepared for withdraw");
         
+        poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
+        poolSharesPreparedTimestamp[msg.sender] = 0;
+
+
         poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
