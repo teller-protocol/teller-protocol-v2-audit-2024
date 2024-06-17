@@ -107,6 +107,13 @@ contract LenderCommitmentGroup_Smart is
     uint16 public interestRateUpperBound;
 
 
+
+
+    mapping(address => uint256) public poolSharesPreparedToWithdrawForLender;
+    mapping(address => uint256) public poolSharesPreparedTimestamp;
+    uint256 immutable public WITHDRAW_DELAY_TIME_SECONDS = 300;
+
+
     //mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
 
@@ -390,6 +397,18 @@ contract LenderCommitmentGroup_Smart is
         );
     }
 
+    function prepareSharesForWithdraw(
+        uint256 _amountPoolSharesTokens 
+    ) external returns (bool) {
+        require( poolSharesToken.balanceOf(msg.sender) >= _amountPoolSharesTokens  );
+
+        poolSharesPreparedToWithdrawForLender[msg.sender] = _amountPoolSharesTokens; 
+        poolSharesPreparedTimestamp[msg.sender] = block.timestamp;
+
+        return true; 
+    }
+
+
     /*
        
     */
@@ -398,8 +417,13 @@ contract LenderCommitmentGroup_Smart is
         address _recipient
     ) external returns (uint256) {
        
-
+        require(poolSharesPreparedToWithdrawForLender[msg.sender] >= _amountPoolSharesTokens,"Shares not prepared for withdraw");
+        require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - WITHDRAW_DELAY_TIME_SECONDS,"Shares not prepared for withdraw");
         
+        poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
+        poolSharesPreparedTimestamp[msg.sender] = 0;
+
+
         poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
