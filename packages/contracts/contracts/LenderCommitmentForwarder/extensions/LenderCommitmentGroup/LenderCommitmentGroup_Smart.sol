@@ -183,7 +183,7 @@ contract LenderCommitmentGroup_Smart is
             _uniswapPoolFee
         );
 
-        require(_twapInterval > MIN_TWAP_INTERVAL, "Invalid TWAP Interval");
+        require(_twapInterval >= MIN_TWAP_INTERVAL, "Invalid TWAP Interval");
         require(UNISWAP_V3_POOL != address(0), "Invalid uniswap pool address");
 
         marketId = _marketId;
