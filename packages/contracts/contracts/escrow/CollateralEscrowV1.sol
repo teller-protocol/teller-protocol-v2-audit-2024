@@ -10,10 +10,12 @@ import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../interfaces/escrow/ICollateralEscrowV1.sol";
 
 contract CollateralEscrowV1 is OwnableUpgradeable, ICollateralEscrowV1 {
-    uint256 public bidId;
+     using SafeERC20 for ERC20;
+     uint256 public bidId;
     /* Mappings */
     mapping(address => Collateral) public collateralBalances; // collateral address -> collateral
 
@@ -117,7 +119,7 @@ contract CollateralEscrowV1 is OwnableUpgradeable, ICollateralEscrowV1 {
             "Asset not allowed to be withdrawn as dust"
         ); 
 
-        IERC20Upgradeable(tokenAddress).transfer(recipient, amount);        
+        IERC20Upgradeable(tokenAddress).safeTransfer(recipient, amount);        
     }
 
 
