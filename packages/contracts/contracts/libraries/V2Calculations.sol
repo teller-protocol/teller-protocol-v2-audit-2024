@@ -127,7 +127,7 @@ library V2Calculations {
             // NOTE: the last cycle could have less than the calculated payment amount
 
             //the amount owed for the cycle should never exceed the current payment cycle amount  so we use min here 
-            uint256 owedAmountForCycle = Math.min(  ((_bid.terms.paymentCycleAmount  * owedTime)+interest_  ) /
+            uint256 owedAmountForCycle = Math.min(  ((_bid.terms.paymentCycleAmount  * owedTime)  ) /
                     _paymentCycleDuration , _bid.terms.paymentCycleAmount+interest_ ) ;
 
             uint256 owedAmount = isLastPaymentCycle
