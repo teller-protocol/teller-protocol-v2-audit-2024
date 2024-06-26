@@ -531,11 +531,8 @@ contract LenderCommitmentGroup_Smart is
          
         poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
         poolSharesPreparedTimestamp[msg.sender] = 0;
- 
-
-        poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
- 
-
+  
+       
         //this should compute BEFORE shares burn 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
             _amountPoolSharesTokens,
