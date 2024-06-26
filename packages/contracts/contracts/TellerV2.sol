@@ -726,7 +726,7 @@ contract TellerV2 is
         acceptedLoan(_bidId, "lenderClaimCollateral")
     {
         Bid storage bid = bids[_bidId];
-        address _collateralRecipient = bid.lender;
+        address _collateralRecipient = getLoanLender(_bidId);
 
         _lenderCloseLoanWithRecipient(_bidId, _collateralRecipient);
     }
@@ -752,7 +752,7 @@ contract TellerV2 is
         bid.state = BidState.CLOSED;
 
         address sender = _msgSenderForMarket(bid.marketplaceId);
-        require(sender == bid.lender, "only lender can close loan");
+        require(sender == getLoanLender(_bidId), "only lender can close loan");
 
       
         collateralManager.lenderClaimCollateralWithRecipient(_bidId, _collateralRecipient);
@@ -1245,7 +1245,10 @@ contract TellerV2 is
         require(codeSize > 0, "Listener must be a contract");
         address sender = _msgSenderForMarket(bids[_bidId].marketplaceId);
 
-        require(sender == bids[_bidId].lender, 'Only bid lender may set repayment listener');
+        require(
+            sender == getLoanLender(_bidId),
+            "Only bid lender may set repayment listener"
+        );
 
         repaymentListenerForBid[_bidId] = _listener;
      }
