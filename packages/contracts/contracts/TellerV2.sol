@@ -164,6 +164,16 @@ contract TellerV2 is
         _;
     }
 
+
+     modifier onlyPauser() {
+        if (pauserRoleBearer[_msgSender()] != true) {
+            revert  ( "Requires role: Pauser");
+        }
+
+        _;
+    }
+
+
     /** Constant Variables **/
 
     uint8 public constant CURRENT_CODE_VERSION = 10;
@@ -260,14 +270,14 @@ contract TellerV2 is
         // Check uri mapping first
         metadataURI_ = uris[_bidId];
         // If the URI is not present in the mapping
-        if (
+      /*  if (
             keccak256(abi.encodePacked(metadataURI_)) ==
             0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 // hardcoded constant of keccak256('')
         ) {
             // Return deprecated bytes32 uri as a string
             uint256 convertedURI = uint256(bids[_bidId]._metadataURI);
             metadataURI_ = StringsUpgradeable.toHexString(convertedURI, 32);
-        }
+        }*/
     }
 
     /**
@@ -443,7 +453,7 @@ contract TellerV2 is
      * @notice Function for a market owner to cancel a bid in the market.
      * @param _bidId The id of the bid to cancel.
      */
-    function marketOwnerCancelBid(uint256 _bidId) external {
+  /*  function marketOwnerCancelBid(uint256 _bidId) external {
         if (
             _msgSender() !=
             marketRegistry.getMarketOwner(bids[_bidId].marketplaceId)
@@ -456,7 +466,7 @@ contract TellerV2 is
         }
         _cancelBid(_bidId);
         emit MarketOwnerCancelledBid(_bidId);
-    }
+    }*/
 
     /**
      * @notice Function for users to cancel a bid.
@@ -710,16 +720,29 @@ contract TellerV2 is
     /**
      * @notice Lets the DAO/owner of the protocol implement an emergency stop mechanism.
      */
-    function pauseProtocol() public virtual onlyOwner whenNotPaused {
+    function pauseProtocol() public virtual onlyPauser whenNotPaused {
         _pause();
     }
 
     /**
      * @notice Lets the DAO/owner of the protocol undo a previously implemented emergency stop.
      */
-    function unpauseProtocol() public virtual onlyOwner whenPaused {
+    function unpauseProtocol() public virtual onlyPauser whenPaused {
         _unpause();
     }
+
+    function addPauser(address _pauser) public virtual onlyOwner   {
+       pauserRoleBearer[_pauser] = true;
+    }
+
+
+    function removePauser(address _pauser) public virtual onlyOwner {
+        pauserRoleBearer[_pauser] = false;
+    }
+
+
+
+
 
     function lenderCloseLoan(uint256 _bidId)
         external
