@@ -166,9 +166,9 @@ contract TellerV2 is
 
 
      modifier onlyPauser() {
-        if (pauserRoleBearer[_msgSender()] != true) {
-            revert  ( "Requires role: Pauser");
-        }
+
+        require( pauserRoleBearer[_msgSender()] ||  owner() == _msgSender(), "Requires role: Pauser");
+       
 
         _;
     }
@@ -270,14 +270,14 @@ contract TellerV2 is
         // Check uri mapping first
         metadataURI_ = uris[_bidId];
         // If the URI is not present in the mapping
-      /*  if (
+        if (
             keccak256(abi.encodePacked(metadataURI_)) ==
             0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 // hardcoded constant of keccak256('')
         ) {
             // Return deprecated bytes32 uri as a string
             uint256 convertedURI = uint256(bids[_bidId]._metadataURI);
             metadataURI_ = StringsUpgradeable.toHexString(convertedURI, 32);
-        }*/
+        }
     }
 
     /**
@@ -884,9 +884,8 @@ contract TellerV2 is
             _borrowerBidsActive[bid.borrower].remove(_bidId);
 
             // If loan is is being liquidated and backed by collateral, withdraw and send to borrower
-            if (_shouldWithdrawCollateral) {
-
-                require( paused() == false, "Cannot withdraw collateral while protocol is paused." );
+            if (_shouldWithdrawCollateral) { 
+               
                 //   _getCollateralManagerForBid(_bidId).withdraw(_bidId);
                 collateralManager.withdraw(_bidId);
             }
