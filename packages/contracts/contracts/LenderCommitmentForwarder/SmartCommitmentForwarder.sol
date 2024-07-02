@@ -7,12 +7,15 @@ import "../interfaces/ILenderCommitmentForwarder.sol";
 import "../interfaces/ISmartCommitmentForwarder.sol";
 import "./LenderCommitmentForwarder_G1.sol";
 
+import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+
 import { CommitmentCollateralType, ISmartCommitment } from "../interfaces/ISmartCommitment.sol";
 
  
 contract SmartCommitmentForwarder is
-   ExtensionsContextUpgradeable, //this should always be first for upgradeability
+    ExtensionsContextUpgradeable, //this should always be first for upgradeability
     TellerV2MarketForwarder_G3,
+    PausableUpgradeable,  //this does add some storage 
     ISmartCommitmentForwarder
      {
     event ExercisedSmartCommitment(
@@ -23,6 +26,16 @@ contract SmartCommitmentForwarder is
     );
 
     error InsufficientBorrowerCollateral(uint256 required, uint256 actual);
+
+
+
+    modifier onlyProtocolPauser() {
+ 
+        require( ITellerV2( _protocolAddress ).isPauser(_msgSender()) , "Sender not authorized");
+        _;
+    }
+
+
 
     constructor(address _protocolAddress, address _marketRegistry)
         TellerV2MarketForwarder_G3(_protocolAddress, _marketRegistry)
