@@ -453,7 +453,7 @@ contract TellerV2 is
      * @notice Function for a market owner to cancel a bid in the market.
      * @param _bidId The id of the bid to cancel.
      */
-  /*  function marketOwnerCancelBid(uint256 _bidId) external {
+    function marketOwnerCancelBid(uint256 _bidId) external {
         if (
             _msgSender() !=
             marketRegistry.getMarketOwner(bids[_bidId].marketplaceId)
@@ -466,7 +466,7 @@ contract TellerV2 is
         }
         _cancelBid(_bidId);
         emit MarketOwnerCancelledBid(_bidId);
-    }*/
+    }
 
     /**
      * @notice Function for users to cancel a bid.
