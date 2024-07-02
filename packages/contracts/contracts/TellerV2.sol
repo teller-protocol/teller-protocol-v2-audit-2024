@@ -745,7 +745,7 @@ contract TellerV2 is
 
 
     function lenderCloseLoan(uint256 _bidId)
-        external
+        external whenNotPaused
         acceptedLoan(_bidId, "lenderClaimCollateral")
     {
         Bid storage bid = bids[_bidId];
@@ -761,7 +761,7 @@ contract TellerV2 is
     function lenderCloseLoanWithRecipient(
         uint256 _bidId,
         address _collateralRecipient
-    ) external {
+    ) external whenNotPaused {
         _lenderCloseLoanWithRecipient(_bidId, _collateralRecipient);
     }
 
@@ -788,7 +788,7 @@ contract TellerV2 is
      * @param _bidId The id of the loan to make the payment towards.
      */
     function liquidateLoanFull(uint256 _bidId)
-        external
+        external whenNotPaused
         acceptedLoan(_bidId, "liquidateLoan")
     {
         Bid storage bid = bids[_bidId];
@@ -800,7 +800,7 @@ contract TellerV2 is
     }
 
     function liquidateLoanFullWithRecipient(uint256 _bidId, address _recipient)
-        external
+        external whenNotPaused
         acceptedLoan(_bidId, "liquidateLoan")
     {
         _liquidateLoanFull(_bidId, _recipient);
@@ -885,6 +885,8 @@ contract TellerV2 is
 
             // If loan is is being liquidated and backed by collateral, withdraw and send to borrower
             if (_shouldWithdrawCollateral) {
+
+                require( paused() == false, "Cannot withdraw collateral while protocol is paused." );
                 //   _getCollateralManagerForBid(_bidId).withdraw(_bidId);
                 collateralManager.withdraw(_bidId);
             }
