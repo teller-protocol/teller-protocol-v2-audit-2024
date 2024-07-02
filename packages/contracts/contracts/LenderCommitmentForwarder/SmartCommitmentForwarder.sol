@@ -15,7 +15,7 @@ import { CommitmentCollateralType, ISmartCommitment } from "../interfaces/ISmart
 contract SmartCommitmentForwarder is
     ExtensionsContextUpgradeable, //this should always be first for upgradeability
     TellerV2MarketForwarder_G3,
-    PausableUpgradeable,  //this does add some storage 
+    PausableUpgradeable,  //this does add some storage but AFTER all other storage
     ISmartCommitmentForwarder
      {
     event ExercisedSmartCommitment(
@@ -29,9 +29,8 @@ contract SmartCommitmentForwarder is
 
 
 
-    modifier onlyProtocolPauser() {
- 
-        require( ITellerV2( _protocolAddress ).isPauser(_msgSender()) , "Sender not authorized");
+    modifier onlyProtocolPauser() { 
+        require( ITellerV2( _tellerV2 ).isPauser(_msgSender()) , "Sender not authorized");
         _;
     }
 
@@ -39,7 +38,12 @@ contract SmartCommitmentForwarder is
 
     constructor(address _protocolAddress, address _marketRegistry)
         TellerV2MarketForwarder_G3(_protocolAddress, _marketRegistry)
-    {}
+    {  }
+
+    function initialize() public initializer {       
+        __Pausable_init();
+    }
+
 
     /**
      * @notice Accept the commitment to submitBid and acceptBid using the funds
@@ -63,7 +67,7 @@ contract SmartCommitmentForwarder is
         address _recipient,
         uint16 _interestRate,
         uint32 _loanDuration
-    ) public returns (uint256 bidId) {
+    ) public whenNotPaused returns (uint256 bidId) {
         require(
             ISmartCommitment(_smartCommitmentAddress)
                 .getCollateralTokenType() <=
@@ -174,6 +178,23 @@ contract SmartCommitmentForwarder is
     }
 
 
+
+    /**
+     * @notice Lets the DAO/owner of the protocol implement an emergency stop mechanism.
+     */
+    function pause() public virtual onlyProtocolPauser whenNotPaused {
+        _pause();
+    }
+
+    /**
+     * @notice Lets the DAO/owner of the protocol undo a previously implemented emergency stop.
+     */
+    function unpause() public virtual onlyProtocolPauser whenPaused {
+        _unpause();
+    }
+
+
+    // -----
 
         //Overrides
     function _msgSender()

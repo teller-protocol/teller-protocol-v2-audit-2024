@@ -741,7 +741,9 @@ contract TellerV2 is
     }
 
 
-
+    function isPauser(address _account) public view returns(bool){
+        return pauserRoleBearer[_account] ;
+    }
 
 
     function lenderCloseLoan(uint256 _bidId)

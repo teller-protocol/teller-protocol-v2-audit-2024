@@ -78,9 +78,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
         _;
     }
 
-    modifier whenProtocolNotPaused() {
-
-        
+    modifier whenProtocolNotPaused() {        
         require( PausableUpgradeable(address(tellerV2)).paused() == false , "Protocol is paused");
         _;
     }

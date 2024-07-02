@@ -51,6 +51,10 @@ contract TellerV2SolMock is ITellerV2, IProtocolFee, TellerV2Storage , ILoanRepa
     }
 
 
+    function isPauser(address _account) public view returns(bool){
+        return false; //for now 
+    }
+
     function approveMarketForwarder(uint256 _marketId, address _forwarder)
         external
     {
