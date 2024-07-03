@@ -59,6 +59,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
         _tellerV2 = new TellerV2SolMock();
         _smartCommitmentForwarder = new SmartCommitmentForwarder();
+         
         _uniswapV3Pool = new UniswapV3PoolMock();
 
         _uniswapV3Factory = new UniswapV3FactoryMock();
@@ -1080,4 +1081,10 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
 
 contract User {}
 
-contract SmartCommitmentForwarder {}
+contract SmartCommitmentForwarder {
+
+    function paused() external returns (bool){
+        return false;
+    }
+
+}
