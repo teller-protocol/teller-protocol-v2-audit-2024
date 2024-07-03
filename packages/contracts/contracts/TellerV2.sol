@@ -174,6 +174,14 @@ contract TellerV2 is
     }
 
 
+    modifier whenLiquidationsNotPaused() {
+        require(!liquidationsPaused, "Liquidations are paused");
+      
+        _;
+    }
+
+
+
     /** Constant Variables **/
 
     uint8 public constant CURRENT_CODE_VERSION = 10;
@@ -718,18 +726,35 @@ contract TellerV2 is
     }
 
     /**
-     * @notice Lets the DAO/owner of the protocol implement an emergency stop mechanism.
+     * @notice Lets a pauser of the protocol implement an emergency stop mechanism.
      */
     function pauseProtocol() public virtual onlyPauser whenNotPaused {
         _pause();
     }
 
     /**
-     * @notice Lets the DAO/owner of the protocol undo a previously implemented emergency stop.
+     * @notice Lets a pauser of the protocol undo a previously implemented emergency stop.
      */
     function unpauseProtocol() public virtual onlyPauser whenPaused {
         _unpause();
     }
+
+
+     /**
+     * @notice Lets a pauser of the protocol implement an emergency stop mechanism.
+     */
+    function pauseLiquidations() public virtual onlyPauser {
+        liquidationsPaused = true;
+    }
+
+    /**
+     * @notice Lets a pauser of the protocol undo a previously implemented emergency stop.
+     */
+    function unpauseLiquidations() public virtual onlyPauser {
+         liquidationsPaused = false;
+    }
+
+
 
     function addPauser(address _pauser) public virtual onlyOwner   {
        pauserRoleBearer[_pauser] = true;
@@ -747,7 +772,7 @@ contract TellerV2 is
 
 
     function lenderCloseLoan(uint256 _bidId)
-        external whenNotPaused
+        external whenNotPaused whenLiquidationsNotPaused
         acceptedLoan(_bidId, "lenderClaimCollateral")
     {
         Bid storage bid = bids[_bidId];
@@ -763,7 +788,7 @@ contract TellerV2 is
     function lenderCloseLoanWithRecipient(
         uint256 _bidId,
         address _collateralRecipient
-    ) external whenNotPaused {
+    ) external whenNotPaused whenLiquidationsNotPaused {
         _lenderCloseLoanWithRecipient(_bidId, _collateralRecipient);
     }
 
@@ -790,7 +815,7 @@ contract TellerV2 is
      * @param _bidId The id of the loan to make the payment towards.
      */
     function liquidateLoanFull(uint256 _bidId)
-        external whenNotPaused
+        external whenNotPaused whenLiquidationsNotPaused
         acceptedLoan(_bidId, "liquidateLoan")
     {
         Bid storage bid = bids[_bidId];
@@ -802,7 +827,7 @@ contract TellerV2 is
     }
 
     function liquidateLoanFullWithRecipient(uint256 _bidId, address _recipient)
-        external whenNotPaused
+        external whenNotPaused whenLiquidationsNotPaused
         acceptedLoan(_bidId, "liquidateLoan")
     {
         _liquidateLoanFull(_bidId, _recipient);
