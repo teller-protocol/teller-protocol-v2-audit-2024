@@ -117,7 +117,7 @@ contract LenderCommitmentGroup_Smart is
 
     mapping(address => uint256) public poolSharesPreparedToWithdrawForLender;
     mapping(address => uint256) public poolSharesPreparedTimestamp;
-    uint256 immutable public WITHDRAW_DELAY_TIME_SECONDS = 300;
+    uint256 immutable public DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS = 300;
 
 
     //mapping(address => uint256) public principalTokensCommittedByLender;
@@ -128,6 +128,7 @@ contract LenderCommitmentGroup_Smart is
     int256 tokenDifferenceFromLiquidations;
 
     bool public firstDepositMade;
+    uint256 public withdrawlDelayTimeSeconds; 
 
 
    
@@ -204,6 +205,15 @@ contract LenderCommitmentGroup_Smart is
         _;
     }
 
+
+     modifier onlyProtocolOwner() {
+        require(
+            msg.sender == Ownable(address(TELLER_V2)).owner(),
+            "Can only be called by TellerV2"
+        );
+        _;
+    }
+
     modifier bidIsActiveForGroup(uint256 _bidId) {
         require(activeBids[_bidId] == true, "Bid is not active for group");
 
@@ -219,6 +229,7 @@ contract LenderCommitmentGroup_Smart is
         TELLER_V2 = _tellerV2;
         SMART_COMMITMENT_FORWARDER = _smartCommitmentForwarder;
         UNISWAP_V3_FACTORY = _uniswapV3Factory;
+     
     }
 
     /*
@@ -256,6 +267,8 @@ contract LenderCommitmentGroup_Smart is
         require(UNISWAP_V3_POOL != address(0), "Invalid uniswap pool address");
 
         marketId = _marketId;
+
+        withdrawlDelayTimeSeconds = DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS;
 
         //in order for this to succeed, first, that SmartCommitmentForwarder needs to be THE trusted forwarder for the market
 
@@ -297,6 +310,12 @@ contract LenderCommitmentGroup_Smart is
             _twapInterval,
             poolSharesToken_
         );
+    }
+
+
+    function setWithdrawlDelayTime(uint256 _seconds) onlyProtocolOwner {
+
+        withdrawlDelayTimeSeconds = _seconds;
     }
 
     function _deployPoolSharesToken()
@@ -526,7 +545,7 @@ contract LenderCommitmentGroup_Smart is
     ) external returns (uint256) {
        
         require(poolSharesPreparedToWithdrawForLender[msg.sender] >= _amountPoolSharesTokens,"Shares not prepared for withdraw");
-        require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - WITHDRAW_DELAY_TIME_SECONDS,"Shares not prepared for withdraw");
+        require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - withdrawlDelayTimeSeconds,"Shares not prepared for withdraw");
         
          
         poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
