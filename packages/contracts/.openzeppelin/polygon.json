@@ -79,6 +79,11 @@
       "address": "0x0EfD3E33Ba2EdE028e50a3E7f81E084996d161aa",
       "txHash": "0x720bd1cad23ecd8720865cdf5099e98988ba04579e76ef6d99dbf2204f82952c",
       "kind": "transparent"
+    },
+    {
+      "address": "0x3C111250572f08493CdC262e210093F92A67DBD9",
+      "txHash": "0x5fa17e0e4ebe4974f6931d1b21a850e8d6e212edc42c893adeb5a91436fbcec6",
+      "kind": "transparent"
     }
   ],
   "impls": {
@@ -6428,6 +6433,307 @@
           "t_uint16": {
             "label": "uint16",
             "numberOfBytes": "2"
+          },
+          "t_uint256": {
+            "label": "uint256",
+            "numberOfBytes": "32"
+          },
+          "t_uint32": {
+            "label": "uint32",
+            "numberOfBytes": "4"
+          },
+          "t_uint8": {
+            "label": "uint8",
+            "numberOfBytes": "1"
+          }
+        },
+        "namespaces": {}
+      }
+    },
+    "6e1be210c27f8d172fa8c10248e263fbc5ebb6ae5100e1ba211ecb4ae1fe7677": {
+      "address": "0x4B07570D370347490A19e34B9AdD32AF0aFE497c",
+      "txHash": "0x02381ab2c52a5dd8ae81d6e53b6fe1368670e9be77ff1a3854fe36dd5a845761",
+      "layout": {
+        "solcVersion": "0.8.9",
+        "storage": [
+          {
+            "label": "_initialized",
+            "offset": 0,
+            "slot": "0",
+            "type": "t_uint8",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+            "retypedFrom": "bool"
+          },
+          {
+            "label": "_initializing",
+            "offset": 1,
+            "slot": "0",
+            "type": "t_bool",
+            "contract": "Initializable",
+            "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "1",
+            "type": "t_array(t_uint256)50_storage",
+            "contract": "ContextUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol:36"
+          },
+          {
+            "label": "_owner",
+            "offset": 0,
+            "slot": "51",
+            "type": "t_address",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:22"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "52",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "OwnableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol:94"
+          },
+          {
+            "label": "_paused",
+            "offset": 0,
+            "slot": "101",
+            "type": "t_bool",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:29"
+          },
+          {
+            "label": "__gap",
+            "offset": 0,
+            "slot": "102",
+            "type": "t_array(t_uint256)49_storage",
+            "contract": "PausableUpgradeable",
+            "src": "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol:116"
+          },
+          {
+            "label": "UNISWAP_V3_POOL",
+            "offset": 0,
+            "slot": "151",
+            "type": "t_address",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:86"
+          },
+          {
+            "label": "poolSharesToken",
+            "offset": 0,
+            "slot": "152",
+            "type": "t_contract(LenderCommitmentGroupShares)19852",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:88"
+          },
+          {
+            "label": "principalToken",
+            "offset": 0,
+            "slot": "153",
+            "type": "t_contract(IERC20)5810",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:90"
+          },
+          {
+            "label": "collateralToken",
+            "offset": 0,
+            "slot": "154",
+            "type": "t_contract(IERC20)5810",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:91"
+          },
+          {
+            "label": "uniswapPoolFee",
+            "offset": 20,
+            "slot": "154",
+            "type": "t_uint24",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:92"
+          },
+          {
+            "label": "marketId",
+            "offset": 0,
+            "slot": "155",
+            "type": "t_uint256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:94"
+          },
+          {
+            "label": "totalPrincipalTokensCommitted",
+            "offset": 0,
+            "slot": "156",
+            "type": "t_uint256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:97"
+          },
+          {
+            "label": "totalPrincipalTokensWithdrawn",
+            "offset": 0,
+            "slot": "157",
+            "type": "t_uint256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:98"
+          },
+          {
+            "label": "totalPrincipalTokensLended",
+            "offset": 0,
+            "slot": "158",
+            "type": "t_uint256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:100"
+          },
+          {
+            "label": "totalPrincipalTokensRepaid",
+            "offset": 0,
+            "slot": "159",
+            "type": "t_uint256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:101"
+          },
+          {
+            "label": "totalInterestCollected",
+            "offset": 0,
+            "slot": "160",
+            "type": "t_uint256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:105"
+          },
+          {
+            "label": "liquidityThresholdPercent",
+            "offset": 0,
+            "slot": "161",
+            "type": "t_uint16",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:107"
+          },
+          {
+            "label": "collateralRatio",
+            "offset": 2,
+            "slot": "161",
+            "type": "t_uint16",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:108"
+          },
+          {
+            "label": "twapInterval",
+            "offset": 4,
+            "slot": "161",
+            "type": "t_uint32",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:110"
+          },
+          {
+            "label": "maxLoanDuration",
+            "offset": 8,
+            "slot": "161",
+            "type": "t_uint32",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:111"
+          },
+          {
+            "label": "interestRateLowerBound",
+            "offset": 12,
+            "slot": "161",
+            "type": "t_uint16",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:112"
+          },
+          {
+            "label": "interestRateUpperBound",
+            "offset": 14,
+            "slot": "161",
+            "type": "t_uint16",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:113"
+          },
+          {
+            "label": "poolSharesPreparedToWithdrawForLender",
+            "offset": 0,
+            "slot": "162",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:118"
+          },
+          {
+            "label": "poolSharesPreparedTimestamp",
+            "offset": 0,
+            "slot": "163",
+            "type": "t_mapping(t_address,t_uint256)",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:119"
+          },
+          {
+            "label": "activeBids",
+            "offset": 0,
+            "slot": "164",
+            "type": "t_mapping(t_uint256,t_bool)",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:124"
+          },
+          {
+            "label": "tokenDifferenceFromLiquidations",
+            "offset": 0,
+            "slot": "165",
+            "type": "t_int256",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:128"
+          },
+          {
+            "label": "firstDepositMade",
+            "offset": 0,
+            "slot": "166",
+            "type": "t_bool",
+            "contract": "LenderCommitmentGroup_Smart",
+            "src": "contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol:130"
+          }
+        ],
+        "types": {
+          "t_address": {
+            "label": "address",
+            "numberOfBytes": "20"
+          },
+          "t_array(t_uint256)49_storage": {
+            "label": "uint256[49]",
+            "numberOfBytes": "1568"
+          },
+          "t_array(t_uint256)50_storage": {
+            "label": "uint256[50]",
+            "numberOfBytes": "1600"
+          },
+          "t_bool": {
+            "label": "bool",
+            "numberOfBytes": "1"
+          },
+          "t_contract(IERC20)5810": {
+            "label": "contract IERC20",
+            "numberOfBytes": "20"
+          },
+          "t_contract(LenderCommitmentGroupShares)19852": {
+            "label": "contract LenderCommitmentGroupShares",
+            "numberOfBytes": "20"
+          },
+          "t_int256": {
+            "label": "int256",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_address,t_uint256)": {
+            "label": "mapping(address => uint256)",
+            "numberOfBytes": "32"
+          },
+          "t_mapping(t_uint256,t_bool)": {
+            "label": "mapping(uint256 => bool)",
+            "numberOfBytes": "32"
+          },
+          "t_uint16": {
+            "label": "uint16",
+            "numberOfBytes": "2"
+          },
+          "t_uint24": {
+            "label": "uint24",
+            "numberOfBytes": "3"
           },
           "t_uint256": {
             "label": "uint256",
