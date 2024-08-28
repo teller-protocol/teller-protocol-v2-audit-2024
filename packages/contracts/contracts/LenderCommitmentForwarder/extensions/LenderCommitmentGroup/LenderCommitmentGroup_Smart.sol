@@ -400,10 +400,13 @@ contract LenderCommitmentGroup_Smart is
 
         //mint shares equal to _amount and give them to the shares recipient !!!
         poolSharesToken.mint(_sharesRecipient, sharesAmount_);
+ 
+        
 
+        // prepare current balance 
+        uint256 sharesBalance = poolSharesToken.balanceOf(address(this));
+        _prepareSharesForWithdraw(sharesBalance); 
 
-        //reset prepared amount 
-        poolSharesPreparedToWithdrawForLender[msg.sender] = 0; 
 
         emit LenderAddedPrincipal( 
 
@@ -506,11 +509,16 @@ contract LenderCommitmentGroup_Smart is
     function prepareSharesForWithdraw(
         uint256 _amountPoolSharesTokens 
     ) external returns (bool) {
+        return _prepareSharesForWithdraw(_amountPoolSharesTokens); 
+    }
+
+     function _prepareSharesForWithdraw(
+        uint256 _amountPoolSharesTokens 
+    ) internal returns (bool) {
         require( poolSharesToken.balanceOf(msg.sender) >= _amountPoolSharesTokens  );
 
         poolSharesPreparedToWithdrawForLender[msg.sender] = _amountPoolSharesTokens; 
-        poolSharesPreparedTimestamp[msg.sender] = block.timestamp;
-       
+        poolSharesPreparedTimestamp[msg.sender] = block.timestamp; 
 
         return true; 
     }
@@ -530,7 +538,7 @@ contract LenderCommitmentGroup_Smart is
         
          
         poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
-        poolSharesPreparedTimestamp[msg.sender] = 0;
+        poolSharesPreparedTimestamp[msg.sender] =  block.timestamp;
   
        
         //this should compute BEFORE shares burn 
