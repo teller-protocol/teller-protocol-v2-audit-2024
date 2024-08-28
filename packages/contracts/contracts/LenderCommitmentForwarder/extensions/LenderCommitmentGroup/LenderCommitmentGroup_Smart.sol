@@ -320,7 +320,9 @@ contract LenderCommitmentGroup_Smart is
     }
 
 
-    function setWithdrawlDelayTime(uint256 _seconds) onlyProtocolOwner {
+    function setWithdrawlDelayTime(uint256 _seconds) 
+    external 
+    onlyProtocolOwner {
 
         withdrawlDelayTimeSeconds = _seconds;
     }
