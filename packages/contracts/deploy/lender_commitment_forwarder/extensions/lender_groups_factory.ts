@@ -33,40 +33,14 @@ const deployFn: DeployFunction = async (hre) => {
 
   const networkName = hre.network.name
 
-  //created pool https://sepolia.etherscan.io/tx/0x8ea20095c821f6066252457d7f0438030bc65bb441e1bea56c6ae0efd63016f0
-
-  const principalTokenAddress = '0x2791bca1f2de4661ed88a30c99a7a9449aa84174' //usdc
-  const collateralTokenAddress = '0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270' //weth
-  const uniswapPoolFee = 500
-
-  const marketId = 46 //for polygon
-  const minInterestRate = 400
-  const maxInterestRate = 800
-  const maxLoanDuration = 10368000
-  const liquidityThresholdPercent = 7500
-  const loanToValuePercent = 12500 //make sure this functions as normal.  If under 100%, getting much better loan terms and i wont repay.  If it is over 100%, it will likely repay since overcollateralized.
-  const twapInterval = 5
-
-  const lenderCommitmentGroupSmart = await hre.deployProxy(
-    'LenderCommitmentGroup_Smart',
+  const lenderGroupsFactory = await hre.deployProxy(
+    'LenderCommitmentGroupFactory',
     {
       unsafeAllow: ['constructor', 'state-variable-immutable'],
       constructorArgs: [
         tellerV2Address,
         smartCommitmentForwarderAddress,
         uniswapV3FactoryAddress,
-      ],
-      initArgs: [
-        principalTokenAddress,
-        collateralTokenAddress,
-        marketId,
-        maxLoanDuration,
-        minInterestRate,
-        maxInterestRate,
-        liquidityThresholdPercent,
-        loanToValuePercent,
-        uniswapPoolFee,
-        twapInterval,
       ],
     }
   )
@@ -75,14 +49,17 @@ const deployFn: DeployFunction = async (hre) => {
 }
 
 // tags and deployment
-deployFn.id = 'lender-commitment-group-smart:deploy'
-deployFn.tags = ['lender-commitment-group-smart']
+deployFn.id = 'lender-commitment-group-factory:deploy'
+deployFn.tags = ['lender-commitment-group-factory']
 deployFn.dependencies = [
   'teller-v2:deploy',
+  'teller-v2:init',
   'smart-commitment-forwarder:deploy',
 ]
 
 deployFn.skip = async (hre) => {
-  return !hre.network.live || !['sepolia', 'polygon'].includes(hre.network.name)
+  return !hre.network.live || !['sepolia'].includes(hre.network.name)
 }
+ 
 export default deployFn
+ 
