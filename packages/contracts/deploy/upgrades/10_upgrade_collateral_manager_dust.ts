@@ -3,14 +3,12 @@ import { DeployFunction } from 'hardhat-deploy/dist/types'
 const deployFn: DeployFunction = async (hre) => {
   hre.log('----------')
   hre.log('')
-  hre.log('TellerV2: Proposing upgrade...')
+  hre.log('CollateralManager: Proposing upgrade...')
 
-  const tellerV2 = await hre.contracts.get('TellerV2')
-  const trustedForwarder = await hre.contracts.get('MetaForwarder')
-  const v2Calculations = await hre.deployments.get('V2Calculations')
-
+  const collateralManager = await hre.contracts.get('CollateralManager')
+ 
   await hre.upgrades.proposeBatchTimelock({
-    title: 'TellerV2: Add Listener Callbacks',
+    title: 'CollateralManager: Add Dust Withdrawl',
     description: ` 
 # TellerV2
 
@@ -18,12 +16,8 @@ const deployFn: DeployFunction = async (hre) => {
 `,
     _steps: [
       {
-        proxy: tellerV2,
-        implFactory: await hre.ethers.getContractFactory('TellerV2', {
-          libraries: {
-            V2Calculations: v2Calculations.address,
-          },
-        }),
+        proxy: collateralManager,
+        implFactory: await hre.ethers.getContractFactory('CollateralManager' ),
 
         opts: {
           unsafeAllow: [
@@ -31,7 +25,7 @@ const deployFn: DeployFunction = async (hre) => {
             'state-variable-immutable',
             'external-library-linking',
           ],
-          constructorArgs: [await trustedForwarder.getAddress()],
+          constructorArgs: [ ],
         },
       },
     ],
@@ -45,14 +39,14 @@ const deployFn: DeployFunction = async (hre) => {
 }
 
 // tags and deployment
-deployFn.id = 'teller-v2:callback-upgrade'
+deployFn.id = 'collateral-manager:dust-upgrade'
 deployFn.tags = [
   'proposal',
   'upgrade',
-  'teller-v2',
-  'teller-v2:callback-upgrade',
+  'collateral-manager',
+  'collateral-manager:dust-upgrade',
 ]
-deployFn.dependencies = ['teller-v2:deploy']
+deployFn.dependencies = ['collateral:manager:deploy']
 deployFn.skip = async (hre) => {
   return !hre.network.live || !['sepolia', 'polygon'].includes(hre.network.name)
 }
