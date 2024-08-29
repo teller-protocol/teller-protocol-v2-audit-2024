@@ -252,7 +252,7 @@ contract TellerV2 is
      * @param _bidId The id of the bid to return the metadataURI for
      * @return metadataURI_ The metadataURI for the bid, as a string.
      */
-    function getMetadataURI(uint256 _bidId)
+   /* function getMetadataURI(uint256 _bidId)
         public
         view
         returns (string memory metadataURI_)
@@ -268,7 +268,7 @@ contract TellerV2 is
             uint256 convertedURI = uint256(bids[_bidId]._metadataURI);
             metadataURI_ = StringsUpgradeable.toHexString(convertedURI, 32);
         }
-    }
+    }*/
 
     /**
      * @notice Function for a borrower to create a bid for a loan without Collateral.

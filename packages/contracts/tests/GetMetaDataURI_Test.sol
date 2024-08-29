@@ -15,7 +15,7 @@ contract GetMetaDataURI_Test is Testable, TellerV2 {
         uris[59] = "ipfs://QmMyDataHash";
     }
 
-    function test_getMetaDataURI() public {
+   /* function test_getMetaDataURI() public {
         string memory oldURI = getMetadataURI(0);
         assertEq(
             oldURI,
@@ -28,5 +28,5 @@ contract GetMetaDataURI_Test is Testable, TellerV2 {
             "ipfs://QmMyDataHash",
             "Expected URI does not match new value in uri mapping"
         );
-    }
+    }*/
 }
