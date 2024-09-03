@@ -164,24 +164,6 @@ contract TellerV2 is
         _;
     }
 
-
-     modifier onlyPauser() {
-
-        require( pauserRoleBearer[_msgSender()] ||  owner() == _msgSender(), "Requires role: Pauser");
-       
-
-        _;
-    }
-
-
-    modifier whenLiquidationsNotPaused() {
-        require(!liquidationsPaused, "Liquidations are paused");
-      
-        _;
-    }
-
-
-
     /** Constant Variables **/
 
     uint8 public constant CURRENT_CODE_VERSION = 10;
@@ -265,7 +247,29 @@ contract TellerV2 is
         escrowVault = IEscrowVault(_escrowVault);
     }
 
-    
+    /**
+     * @notice Gets the metadataURI for a bidId.
+     * @param _bidId The id of the bid to return the metadataURI for
+     * @return metadataURI_ The metadataURI for the bid, as a string.
+     */
+    function getMetadataURI(uint256 _bidId)
+        public
+        view
+        returns (string memory metadataURI_)
+    {
+        // Check uri mapping first
+        metadataURI_ = uris[_bidId];
+        // If the URI is not present in the mapping
+        if (
+            keccak256(abi.encodePacked(metadataURI_)) ==
+            0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 // hardcoded constant of keccak256('')
+        ) {
+            // Return deprecated bytes32 uri as a string
+            uint256 convertedURI = uint256(bids[_bidId]._metadataURI);
+            metadataURI_ = StringsUpgradeable.toHexString(convertedURI, 32);
+        }
+    }
+
     /**
      * @notice Function for a borrower to create a bid for a loan without Collateral.
      * @param _lendingToken The lending token asset requested to be borrowed.
@@ -704,53 +708,21 @@ contract TellerV2 is
     }
 
     /**
-     * @notice Lets a pauser of the protocol implement an emergency stop mechanism.
+     * @notice Lets the DAO/owner of the protocol implement an emergency stop mechanism.
      */
-    function pauseProtocol() public virtual onlyPauser whenNotPaused {
+    function pauseProtocol() public virtual onlyOwner whenNotPaused {
         _pause();
     }
 
     /**
-     * @notice Lets a pauser of the protocol undo a previously implemented emergency stop.
+     * @notice Lets the DAO/owner of the protocol undo a previously implemented emergency stop.
      */
-    function unpauseProtocol() public virtual onlyPauser whenPaused {
+    function unpauseProtocol() public virtual onlyOwner whenPaused {
         _unpause();
     }
 
-
-     /**
-     * @notice Lets a pauser of the protocol implement an emergency stop mechanism.
-     */
-    function pauseLiquidations() public virtual onlyPauser {
-        liquidationsPaused = true;
-    }
-
-    /**
-     * @notice Lets a pauser of the protocol undo a previously implemented emergency stop.
-     */
-    function unpauseLiquidations() public virtual onlyPauser {
-         liquidationsPaused = false;
-    }
-
-
-
-    function addPauser(address _pauser) public virtual onlyOwner   {
-       pauserRoleBearer[_pauser] = true;
-    }
-
-
-    function removePauser(address _pauser) public virtual onlyOwner {
-        pauserRoleBearer[_pauser] = false;
-    }
-
-
-    function isPauser(address _account) public view returns(bool){
-        return pauserRoleBearer[_account] ;
-    }
-
-
     function lenderCloseLoan(uint256 _bidId)
-        external whenNotPaused whenLiquidationsNotPaused
+        external
         acceptedLoan(_bidId, "lenderClaimCollateral")
     {
         Bid storage bid = bids[_bidId];
@@ -766,7 +738,7 @@ contract TellerV2 is
     function lenderCloseLoanWithRecipient(
         uint256 _bidId,
         address _collateralRecipient
-    ) external whenNotPaused whenLiquidationsNotPaused {
+    ) external {
         _lenderCloseLoanWithRecipient(_bidId, _collateralRecipient);
     }
 
@@ -793,7 +765,7 @@ contract TellerV2 is
      * @param _bidId The id of the loan to make the payment towards.
      */
     function liquidateLoanFull(uint256 _bidId)
-        external whenNotPaused whenLiquidationsNotPaused
+        external
         acceptedLoan(_bidId, "liquidateLoan")
     {
         Bid storage bid = bids[_bidId];
@@ -805,7 +777,7 @@ contract TellerV2 is
     }
 
     function liquidateLoanFullWithRecipient(uint256 _bidId, address _recipient)
-        external whenNotPaused whenLiquidationsNotPaused
+        external
         acceptedLoan(_bidId, "liquidateLoan")
     {
         _liquidateLoanFull(_bidId, _recipient);
@@ -889,8 +861,7 @@ contract TellerV2 is
             _borrowerBidsActive[bid.borrower].remove(_bidId);
 
             // If loan is is being liquidated and backed by collateral, withdraw and send to borrower
-            if (_shouldWithdrawCollateral) { 
-               
+            if (_shouldWithdrawCollateral) {
                 //   _getCollateralManagerForBid(_bidId).withdraw(_bidId);
                 collateralManager.withdraw(_bidId);
             }
