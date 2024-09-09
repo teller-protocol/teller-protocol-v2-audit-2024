@@ -117,7 +117,7 @@ contract LenderCommitmentGroup_Smart is
 
     mapping(address => uint256) public poolSharesPreparedToWithdrawForLender;
     mapping(address => uint256) public poolSharesPreparedTimestamp;
-    uint256 immutable public WITHDRAW_DELAY_TIME_SECONDS = 300;
+    uint256 immutable public DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS = 300;
 
 
     //mapping(address => uint256) public principalTokensCommittedByLender;
@@ -128,6 +128,7 @@ contract LenderCommitmentGroup_Smart is
     int256 tokenDifferenceFromLiquidations;
 
     bool public firstDepositMade;
+    uint256 public withdrawlDelayTimeSeconds; 
 
 
    
@@ -187,6 +188,13 @@ contract LenderCommitmentGroup_Smart is
         uint256 totalInterestCollected
     );
 
+     event PoolSharesPrepared(
+        address lender,
+        uint256 sharesAmount,
+        uint256 preparedAt
+
+    );
+
 
     modifier onlySmartCommitmentForwarder() {
         require(
@@ -204,11 +212,27 @@ contract LenderCommitmentGroup_Smart is
         _;
     }
 
+
+     modifier onlyProtocolOwner() {
+        require(
+            msg.sender == Ownable(address(TELLER_V2)).owner(),
+            "Can only be called by TellerV2"
+        );
+        _;
+    }
+
     modifier bidIsActiveForGroup(uint256 _bidId) {
         require(activeBids[_bidId] == true, "Bid is not active for group");
 
         _;
     }
+
+    modifier whenForwarderNotPaused() {
+         require( PausableUpgradeable(address(SMART_COMMITMENT_FORWARDER)).paused() == false , "Protocol is paused");
+        _;
+    }
+
+
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
@@ -219,6 +243,7 @@ contract LenderCommitmentGroup_Smart is
         TELLER_V2 = _tellerV2;
         SMART_COMMITMENT_FORWARDER = _smartCommitmentForwarder;
         UNISWAP_V3_FACTORY = _uniswapV3Factory;
+     
     }
 
     /*
@@ -256,6 +281,8 @@ contract LenderCommitmentGroup_Smart is
         require(UNISWAP_V3_POOL != address(0), "Invalid uniswap pool address");
 
         marketId = _marketId;
+
+        withdrawlDelayTimeSeconds = DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS;
 
         //in order for this to succeed, first, that SmartCommitmentForwarder needs to be THE trusted forwarder for the market
 
@@ -297,6 +324,14 @@ contract LenderCommitmentGroup_Smart is
             _twapInterval,
             poolSharesToken_
         );
+    }
+
+
+    function setWithdrawlDelayTime(uint256 _seconds) 
+    external 
+    onlyProtocolOwner {
+
+        withdrawlDelayTimeSeconds = _seconds;
     }
 
     function _deployPoolSharesToken()
@@ -374,7 +409,7 @@ contract LenderCommitmentGroup_Smart is
         uint256 _amount,
         address _sharesRecipient,
         uint256 _minSharesAmountOut
-    ) external returns (uint256 sharesAmount_) {
+    ) external whenForwarderNotPaused returns (uint256 sharesAmount_) {
         //transfers the primary principal token from msg.sender into this contract escrow
 
        
@@ -400,10 +435,13 @@ contract LenderCommitmentGroup_Smart is
 
         //mint shares equal to _amount and give them to the shares recipient !!!
         poolSharesToken.mint(_sharesRecipient, sharesAmount_);
+ 
+        
 
+        // prepare current balance 
+        uint256 sharesBalance = poolSharesToken.balanceOf(address(_sharesRecipient));
+        _prepareSharesForWithdraw(_sharesRecipient,sharesBalance); 
 
-        //reset prepared amount 
-        poolSharesPreparedToWithdrawForLender[msg.sender] = 0; 
 
         emit LenderAddedPrincipal( 
 
@@ -445,7 +483,7 @@ contract LenderCommitmentGroup_Smart is
         uint256 _collateralTokenId, 
         uint32 _loanDuration,
         uint16 _interestRate
-    ) external onlySmartCommitmentForwarder whenNotPaused {
+    ) external onlySmartCommitmentForwarder whenForwarderNotPaused {
         
         require(
             _collateralTokenAddress == address(collateralToken),
@@ -505,12 +543,30 @@ contract LenderCommitmentGroup_Smart is
 
     function prepareSharesForWithdraw(
         uint256 _amountPoolSharesTokens 
-    ) external returns (bool) {
-        require( poolSharesToken.balanceOf(msg.sender) >= _amountPoolSharesTokens  );
+    ) external whenForwarderNotPaused returns (bool) {
+        return _prepareSharesForWithdraw(msg.sender,_amountPoolSharesTokens); 
+    }
 
-        poolSharesPreparedToWithdrawForLender[msg.sender] = _amountPoolSharesTokens; 
-        poolSharesPreparedTimestamp[msg.sender] = block.timestamp;
-       
+     function _prepareSharesForWithdraw(
+        address _recipient,
+        uint256 _amountPoolSharesTokens 
+    ) internal returns (bool) {
+   
+        require( poolSharesToken.balanceOf(_recipient) >= _amountPoolSharesTokens  );
+
+        poolSharesPreparedToWithdrawForLender[_recipient] = _amountPoolSharesTokens; 
+        poolSharesPreparedTimestamp[_recipient] = block.timestamp; 
+
+
+
+         emit PoolSharesPrepared( 
+
+            _recipient,
+            _amountPoolSharesTokens,
+           block.timestamp
+
+         );
+
 
         return true; 
     }
@@ -523,14 +579,14 @@ contract LenderCommitmentGroup_Smart is
         uint256 _amountPoolSharesTokens,
         address _recipient,
         uint256 _minAmountOut
-    ) external returns (uint256) {
+    ) external whenForwarderNotPaused returns (uint256) {
        
         require(poolSharesPreparedToWithdrawForLender[msg.sender] >= _amountPoolSharesTokens,"Shares not prepared for withdraw");
-        require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - WITHDRAW_DELAY_TIME_SECONDS,"Shares not prepared for withdraw");
+        require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - withdrawlDelayTimeSeconds,"Shares not prepared for withdraw");
         
          
         poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
-        poolSharesPreparedTimestamp[msg.sender] = 0;
+        poolSharesPreparedTimestamp[msg.sender] =  block.timestamp;
   
        
         //this should compute BEFORE shares burn 
@@ -566,7 +622,7 @@ contract LenderCommitmentGroup_Smart is
     function liquidateDefaultedLoanWithIncentive(
         uint256 _bidId,
         int256 _tokenAmountDifference
-    ) public bidIsActiveForGroup(_bidId) {
+    ) public whenForwarderNotPaused bidIsActiveForGroup(_bidId) {
         
         //use original principal amount as amountDue
 
@@ -863,7 +919,7 @@ contract LenderCommitmentGroup_Smart is
         address repayer,
         uint256 principalAmount,
         uint256 interestAmount
-    ) external onlyTellerV2 {
+    ) external onlyTellerV2 whenForwarderNotPaused {
         //can use principal amt to increment amt paid back!! nice for math .
         totalPrincipalTokensRepaid += principalAmount;
         totalInterestCollected += interestAmount;
@@ -883,7 +939,7 @@ contract LenderCommitmentGroup_Smart is
         If principaltokens get stuck in the escrow vault for any reason, anyone may
         call this function to move them from that vault in to this contract 
     */
-    function withdrawFromEscrowVault ( uint256 _amount ) public  {
+    function withdrawFromEscrowVault ( uint256 _amount ) public whenForwarderNotPaused  {
 
 
         address _escrowVault = ITellerV2(TELLER_V2).getEscrowVault();
