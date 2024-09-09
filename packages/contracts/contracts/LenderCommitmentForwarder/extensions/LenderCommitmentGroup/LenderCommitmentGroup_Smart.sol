@@ -188,6 +188,13 @@ contract LenderCommitmentGroup_Smart is
         uint256 totalInterestCollected
     );
 
+     event PoolSharesPrepared(
+        address lender,
+        uint256 sharesAmount,
+        uint256 preparedAt
+
+    );
+
 
     modifier onlySmartCommitmentForwarder() {
         require(
@@ -432,7 +439,7 @@ contract LenderCommitmentGroup_Smart is
         
 
         // prepare current balance 
-        uint256 sharesBalance = poolSharesToken.balanceOf(address(this));
+        uint256 sharesBalance = poolSharesToken.balanceOf(address(_sharesRecipient));
         _prepareSharesForWithdraw(sharesBalance); 
 
 
@@ -548,6 +555,17 @@ contract LenderCommitmentGroup_Smart is
 
         poolSharesPreparedToWithdrawForLender[msg.sender] = _amountPoolSharesTokens; 
         poolSharesPreparedTimestamp[msg.sender] = block.timestamp; 
+
+
+
+         emit PoolSharesPrepared( 
+
+            msg.sender,
+            _amountPoolSharesTokens,
+           block.timestamp
+
+         );
+
 
         return true; 
     }
