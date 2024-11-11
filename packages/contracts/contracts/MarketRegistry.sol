@@ -27,7 +27,8 @@ contract MarketRegistry is
     /** Constant Variables **/
 
     uint256 public constant CURRENT_CODE_VERSION = 8;
-    uint256 public constant MAX_MARKET_FEE_PERCENT = 1000;
+     uint256 public constant MAX_MARKET_FEE_PERCENT = 1000;
+
     /* Storage Variables */
 
     struct Marketplace {
@@ -637,12 +638,15 @@ contract MarketRegistry is
         public
         ownsMarket(_marketId)
     {
+        
         require(
             _newPercent >= 0 && _newPercent <= MAX_MARKET_FEE_PERCENT,
             "invalid fee percent"
         );
-        
-        if (_newPercent != markets[_marketId].marketplaceFeePercent) {
+
+
+
+    if (_newPercent != markets[_marketId].marketplaceFeePercent) {
             markets[_marketId].marketplaceFeePercent = _newPercent;
             emit SetMarketFee(_marketId, _newPercent);
         }

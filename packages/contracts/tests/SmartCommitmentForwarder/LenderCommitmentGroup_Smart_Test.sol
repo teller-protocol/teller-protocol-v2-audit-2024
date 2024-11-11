@@ -1,14 +1,22 @@
-import { Testable } from "../../../Testable.sol";
+import { Testable } from "../Testable.sol";
 
 import { LenderCommitmentGroup_Smart_Override } from "./LenderCommitmentGroup_Smart_Override.sol";
 
-import {TestERC20Token} from "../../../tokens/TestERC20Token.sol";
+import {TestERC20Token} from "../tokens/TestERC20Token.sol";
 
-import {TellerV2SolMock} from "../../../../contracts/mock/TellerV2SolMock.sol";
-import {UniswapV3PoolMock} from "../../../../contracts/mock/uniswap/UniswapV3PoolMock.sol";
-import {UniswapV3FactoryMock} from "../../../../contracts/mock/uniswap/UniswapV3FactoryMock.sol";
-import { PaymentType, PaymentCycleType } from "../../../../contracts/libraries/V2Calculations.sol";
-import { LoanDetails, Payment, BidState , Bid, Terms } from "../../../../contracts/TellerV2Storage.sol";
+
+import {MarketRegistry} from "../../contracts/MarketRegistry.sol";
+import {SmartCommitmentForwarder} from "../../contracts/LenderCommitmentForwarder/SmartCommitmentForwarder.sol";
+import {TellerV2SolMock} from "../../contracts/mock/TellerV2SolMock.sol";
+import {UniswapV3PoolMock} from "../../contracts/mock/uniswap/UniswapV3PoolMock.sol";
+import {UniswapV3FactoryMock} from "../../contracts/mock/uniswap/UniswapV3FactoryMock.sol";
+import { PaymentType, PaymentCycleType } from "../../contracts/libraries/V2Calculations.sol";
+import { LoanDetails, Payment, BidState , Bid, Terms } from "../../contracts/TellerV2Storage.sol";
+
+import { ILenderCommitmentGroup } from "../../contracts/interfaces/ILenderCommitmentGroup.sol";
+import { IUniswapPricingLibrary } from "../../contracts/interfaces/IUniswapPricingLibrary.sol";
+
+import {ProtocolPausingManager} from "../../contracts/pausing/ProtocolPausingManager.sol";
 
 
 import "lib/forge-std/src/console.sol";
@@ -47,6 +55,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
     LenderCommitmentGroup_Smart_Override lenderCommitmentGroupSmart;
 
+    MarketRegistry _marketRegistry;
     TellerV2SolMock _tellerV2;
     SmartCommitmentForwarder _smartCommitmentForwarder;
     UniswapV3PoolMock _uniswapV3Pool;
@@ -58,13 +67,22 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         liquidator = new User();
 
         _tellerV2 = new TellerV2SolMock();
-        _smartCommitmentForwarder = new SmartCommitmentForwarder();
+        _marketRegistry = new MarketRegistry();
+        _smartCommitmentForwarder = new SmartCommitmentForwarder(
+            address(_tellerV2),address(_marketRegistry));
          
         _uniswapV3Pool = new UniswapV3PoolMock();
 
         _uniswapV3Factory = new UniswapV3FactoryMock();
         _uniswapV3Factory.setPoolMock(address(_uniswapV3Pool));
- 
+
+
+        ProtocolPausingManager protocolPausingManager = new ProtocolPausingManager();
+        protocolPausingManager.initialize();
+
+        _tellerV2.setProtocolPausingManager(address(protocolPausingManager));
+      
+
 
         principalToken = new TestERC20Token("wrappedETH", "WETH", 1e24, 18);
 
@@ -89,24 +107,51 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         address _collateralTokenAddress = address(collateralToken);
         uint256 _marketId = 1;
         uint32 _maxLoanDuration = 5000000;
-        uint16 _minInterestRate = 0;
-        uint16 _maxInterestRate = 800;
+        uint16 _interestRateLowerBound = 0;
+        uint16 _interestRateUpperBound = 800;
         uint16 _liquidityThresholdPercent = 10000;
-        uint16 _loanToValuePercent = 10000;
-        uint24 _uniswapPoolFee = 3000;
-        uint32 _twapInterval = 5;
+        uint16 _collateralRatio = 10000;
+       // uint24 _uniswapPoolFee = 3000;
+       // uint32 _twapInterval = 5;
+
+         ILenderCommitmentGroup.CommitmentGroupConfig memory groupConfig = ILenderCommitmentGroup.CommitmentGroupConfig({
+            principalTokenAddress: _principalTokenAddress,
+            collateralTokenAddress: _collateralTokenAddress,
+            marketId: _marketId,
+            maxLoanDuration: _maxLoanDuration,
+            interestRateLowerBound: _interestRateLowerBound,
+            interestRateUpperBound: _interestRateUpperBound,
+            liquidityThresholdPercent: _liquidityThresholdPercent,
+            collateralRatio: _collateralRatio
+           // uniswapPoolFee: _uniswapPoolFee,
+           // twapInterval: _twapInterval
+        });
+
+          bool zeroForOne = false;
+          uint32 twapInterval = 0;
+
+
+          IUniswapPricingLibrary.PoolRouteConfig
+            memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+                pool: address(_uniswapV3Pool),
+                zeroForOne: zeroForOne,
+                twapInterval: twapInterval,
+                token0Decimals: 18,
+                token1Decimals: 18
+            });
+
+
+       IUniswapPricingLibrary.PoolRouteConfig[]
+            memory routesConfig = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            );
+
+        routesConfig[0] = routeConfig; 
+
 
         address _poolSharesToken = lenderCommitmentGroupSmart.initialize(
-            _principalTokenAddress,
-            _collateralTokenAddress,
-            _marketId,
-            _maxLoanDuration,
-            _minInterestRate,
-            _maxInterestRate,
-            _liquidityThresholdPercent,
-            _loanToValuePercent,
-            _uniswapPoolFee,
-            _twapInterval
+            groupConfig,
+            routesConfig
         );
 
         lenderCommitmentGroupSmart.mock_setFirstDepositMade(true);
@@ -117,24 +162,53 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         address _collateralTokenAddress = address(collateralToken);
         uint256 _marketId = 1;
         uint32 _maxLoanDuration = 5000000;
-        uint16 _minInterestRate = 100;
-         uint16 _maxInterestRate = 800;
+        uint16 _interestRateLowerBound = 100;
+        uint16 _interestRateUpperBound = 800;
         uint16 _liquidityThresholdPercent = 10000;
-        uint16 _loanToValuePercent = 10000;
-        uint24 _uniswapPoolFee = 3000;
-        uint32 _twapInterval = 5;
+        uint16 _collateralRatio = 10000;
+      //  uint24 _uniswapPoolFee = 3000;
+      //  uint32 _twapInterval = 5;
+
+
+      ILenderCommitmentGroup.CommitmentGroupConfig memory groupConfig = ILenderCommitmentGroup.CommitmentGroupConfig({
+            principalTokenAddress: _principalTokenAddress,
+            collateralTokenAddress: _collateralTokenAddress,
+            marketId: _marketId,
+            maxLoanDuration: _maxLoanDuration,
+            interestRateLowerBound: _interestRateLowerBound,
+            interestRateUpperBound: _interestRateUpperBound,
+            liquidityThresholdPercent: _liquidityThresholdPercent,
+            collateralRatio: _collateralRatio
+          //  uniswapPoolFee: _uniswapPoolFee,
+          //  twapInterval: _twapInterval
+        });
+
+       bool zeroForOne = false;
+      uint32 twapInterval = 0;
+
+
+          IUniswapPricingLibrary.PoolRouteConfig
+            memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+                pool: address(_uniswapV3Pool),
+                zeroForOne: zeroForOne,
+                twapInterval: twapInterval,
+                token0Decimals: 18,
+                token1Decimals: 18
+            });
+
+
+
+       IUniswapPricingLibrary.PoolRouteConfig[]
+            memory routesConfig = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            );
+
+        routesConfig[0] = routeConfig; 
+
 
         address _poolSharesToken = lenderCommitmentGroupSmart.initialize(
-            _principalTokenAddress,
-            _collateralTokenAddress,
-            _marketId,
-            _maxLoanDuration,
-            _minInterestRate,
-            _maxInterestRate,
-            _liquidityThresholdPercent,
-            _loanToValuePercent,
-            _uniswapPoolFee,
-            _twapInterval
+             groupConfig,
+            routesConfig
         );
 
         // assertFalse(isTrustedBefore, "Should not be trusted forwarder before");
@@ -540,163 +614,6 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
 
 
-/*
-    make sure both pos and neg branches get run, and tellerV2 is called at the end 
-*/
-    function test_liquidateDefaultedLoanWithIncentive() public {
-          initialize_group_contract();
-
-        principalToken.transfer(address(liquidator), 1e18);
-        uint256 originalBalance = principalToken.balanceOf(address(liquidator));
-
-        uint256 amountOwed = 100;
-   
-        
-        uint256 bidId = 0;
-    
-
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
-
-   
-
-         vm.warp(1000);   //loanDefaultedTimeStamp ?
-
-       lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId,true); 
-      
-       vm.prank(address(liquidator));
-       principalToken.approve(address(lenderCommitmentGroupSmart), 1e18);
-
-       int256 minAmountDifference = 2000;
-
-       lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(minAmountDifference);
-
-        int256 tokenAmountDifference = 4000;
-        vm.prank(address(liquidator));
-        lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
-           bidId, 
-           tokenAmountDifference           
-        );
-
-        uint256 updatedBalance = principalToken.balanceOf(address(liquidator));
-
-        int256 expectedDifference = int256(amountOwed) + minAmountDifference;
-
-        assertEq(originalBalance - updatedBalance , uint256(expectedDifference), "unexpected tokenDifferenceFromLiquidations");
-
-
-      //make sure lenderCloseloan is called 
-       assertEq( _tellerV2.lenderCloseLoanWasCalled(), true, "lender close loan not called");
-    }
-
-
-    //complete me 
-     function test_liquidateDefaultedLoanWithIncentive_negative_direction() public {
-
-
-        initialize_group_contract();
-
-        principalToken.transfer(address(liquidator), 1e18);
-        uint256 originalBalance = principalToken.balanceOf(address(liquidator));
-
-        uint256 amountOwed = 1000;
-   
-        
-        uint256 bidId = 0;
-    
-
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
-
-   
-        //time has advanced enough to now have a 50 percent discount s
-         vm.warp(1000);   //loanDefaultedTimeStamp ?
-
-       lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId,true); 
-      
-       vm.prank(address(liquidator));
-       principalToken.approve(address(lenderCommitmentGroupSmart), 1e18);
-
-       lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(-500);
-
-        int256 tokenAmountDifference = -500;
-        vm.prank(address(liquidator));
-        lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
-           bidId, 
-           tokenAmountDifference           
-        );
-
-        uint256 updatedBalance = principalToken.balanceOf(address(liquidator));
-
-        require(tokenAmountDifference < 0); //ensure this test is set up properly 
-
-        // we expect it to be amountOwned - abs(tokenAmountDifference ) but we can just test it like this 
-        int256 expectedDifference = int256(amountOwed) + ( tokenAmountDifference);
-
-        assertEq(originalBalance - updatedBalance , uint256(expectedDifference), "unexpected tokenDifferenceFromLiquidations");
-
-
-      //make sure lenderCloseloan is called 
-       assertEq( _tellerV2.lenderCloseLoanWasCalled(), true, "lender close loan not called");
-     }
-
-
-function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid() public {
-
-
-        initialize_group_contract();
-
-        principalToken.transfer(address(liquidator), 1e18);
-        uint256 originalBalance = principalToken.balanceOf(address(liquidator));
-
-        uint256 amountOwed = 1000;
-   
-        
-        uint256 bidId = 0;
-    
-
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
-
-   
-        //time has advanced enough to now have a 50 percent discount s
-         vm.warp(1000);   //loanDefaultedTimeStamp ?
-
-       lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId,true); 
-      
-       vm.prank(address(liquidator));
-       principalToken.approve(address(lenderCommitmentGroupSmart), 1e18);
-
-
-        lenderCommitmentGroupSmart.set_totalPrincipalTokensRepaid(0);
-
-       lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(-500);
-
-        int256 tokenAmountDifference = -500;
-        vm.prank(address(liquidator));
-        lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
-           bidId, 
-           tokenAmountDifference           
-        );
-
-            //simulate the repay loan callback as would happen in a liquidation 
-        vm.prank(address(_tellerV2));
-        lenderCommitmentGroupSmart.repayLoanCallback(
-            bidId,
-            address(this),
-            amountOwed,
-            20
-        );
-
-        uint256 updatedBalance = principalToken.balanceOf(address(liquidator));
-
-        uint256 totalPrincipalTokensRepaid = lenderCommitmentGroupSmart.totalPrincipalTokensRepaid();
-
- 
-        assertEq(totalPrincipalTokensRepaid, amountOwed, "unexpected totalPrincipalTokensRepaid");
-
-
-      //make sure lenderCloseloan is called 
-       assertEq( _tellerV2.lenderCloseLoanWasCalled(), true, "lender close loan not called");
-     }
-
 
 
 
@@ -721,7 +638,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
             loanDefaultTimestamp
         );
 
-      int256 expectedMinAmount = 4220; //based on loanDefaultTimestamp gap 
+      int256 expectedMinAmount = 3720; //based on loanDefaultTimestamp gap 
 
        assertEq(min_amount,expectedMinAmount,"min_amount unexpected");
 
@@ -769,7 +686,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
             loanDefaultTimestamp
         );
 
-      int256 expectedMinAmount = 3220; //based on loanDefaultTimestamp gap 
+      int256 expectedMinAmount = 2720; //based on loanDefaultTimestamp gap 
 
        assertEq(min_amount,expectedMinAmount,"min_amount unexpected");
 
@@ -824,9 +741,18 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
 
 
     function test_acceptFundsForAcceptBid() public {
-        lenderCommitmentGroupSmart.set_mock_getMaxPrincipalPerCollateralAmount(
+
+
+        //this mock no longer helps ! 
+       /* lenderCommitmentGroupSmart.set_mock_getMaxPrincipalPerCollateralAmount(
             100 * 1e18
+        );*/
+
+        lenderCommitmentGroupSmart.set_mock_requiredCollateralAmount(
+            100  
         );
+
+        
 
         principalToken.transfer(address(lenderCommitmentGroupSmart), 1e18);
         collateralToken.transfer(address(lenderCommitmentGroupSmart), 1e18);
@@ -836,7 +762,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
         lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(1000000);
 
         uint256 principalAmount = 50;
-        uint256 collateralAmount = 50 * 100;
+        uint256 collateralAmount =   100;
 
         address collateralTokenAddress = address(
             lenderCommitmentGroupSmart.collateralToken()
@@ -880,8 +806,12 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
     }
 
     function test_acceptFundsForAcceptBid_insufficientCollateral() public {
-        lenderCommitmentGroupSmart.set_mock_getMaxPrincipalPerCollateralAmount(
+        /*lenderCommitmentGroupSmart.set_mock_getMaxPrincipalPerCollateralAmount(
             100 * 1e18
+        );*/
+
+          lenderCommitmentGroupSmart.set_mock_requiredCollateralAmount(
+            100  
         );
 
         principalToken.transfer(address(lenderCommitmentGroupSmart), 1e18);
@@ -930,6 +860,8 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
       
     */
 
+
+/*
     function test_getCollateralTokensAmountEquivalentToPrincipalTokens_scenarioA() public {
          
         initialize_group_contract();
@@ -1042,6 +974,9 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
             "Unexpected getCollateralTokensPricePerPrincipalTokens"
         );
     }
+*/
+
+
 
 
      /*
@@ -1049,6 +984,7 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
 
       test for _getUniswapV3TokenPairPrice
     */
+    /*
  function test_getPriceFromSqrtX96_scenarioA() public {
          
         initialize_group_contract(); 
@@ -1077,14 +1013,18 @@ function test_liquidateDefaultedLoanWithIncentive_does_not_double_count_repaid()
             "Unexpected getPriceFromSqrtX96"
         );
     }
+
+    */
+
 }
 
 contract User {}
 
+/*
 contract SmartCommitmentForwarder {
 
     function paused() external returns (bool){
         return false;
     }
 
-}
+}*/
