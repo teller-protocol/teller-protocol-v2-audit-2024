@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-import { LenderCommitmentGroup_Smart } from "../../../../contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol";
+import { LenderCommitmentGroup_Smart } from "../../contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol";
 
 contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
     //  bool public submitBidWasCalled;
@@ -12,6 +12,7 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
     //  bool public acceptBidWasCalled;
 
     uint256 mockMaxPrincipalPerCollateralAmount;
+    uint256 mockRequiredCollateralAmount;
     uint256 mockSharesExchangeRate;
     int256 mockMinimumAmountDifferenceToCloseDefaultedLoan;
 
@@ -28,7 +29,7 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
         mockSharesExchangeRate = _mockRate;
     }
 
-       function set_mockBidAsActiveForGroup(uint256 _bidId,bool _active) public {
+    function set_mockBidAsActiveForGroup(uint256 _bidId,bool _active) public {
         activeBids[_bidId] = _active;
     }
  
@@ -111,6 +112,10 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
         mockMaxPrincipalPerCollateralAmount = amt;
     }
 
+      function set_mock_requiredCollateralAmount(uint256 amt) public {
+        mockRequiredCollateralAmount = amt;
+    }
+
     function mock_setFirstDepositMade(bool made) public {
         firstDepositMade = made;
 
@@ -147,36 +152,62 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
           mockToken1 = token1;
         
     }
-
+/*
     function _getPoolTokens() internal view override returns (address token0, address token1) {
 
         return (mockToken0,mockToken1); 
         
     }
-
-    function super_getCollateralTokensAmountEquivalentToPrincipalTokens(
+*/
+  /*  function super_getCollateralTokensAmountEquivalentToPrincipalTokens(
         uint256 principalTokenAmountValue,
-        uint256 pairPriceWithTwap,
-        uint256 pairPriceImmediate,  
-        bool principalTokenIsToken0
+        uint256 pairPriceWithTwap 
+     //   uint256 pairPriceImmediate,  
+      //  bool principalTokenIsToken0
     ) public view returns(uint256){
 
         return super._getCollateralTokensAmountEquivalentToPrincipalTokens(
             principalTokenAmountValue,
-            pairPriceWithTwap,
-            pairPriceImmediate,
-            principalTokenIsToken0
+            pairPriceWithTwap 
+            //pairPriceImmediate,
+           // principalTokenIsToken0
         );
 
     }
 
+*/
 
+
+    function getRequiredCollateral(
+       uint256 _principalAmount,
+       uint256 maxPrincipalPerCollateralAmount 
+       
+    ) public view override returns (uint256 collateralTokensAmountToMatchValue) {
+ 
+        return  mockRequiredCollateralAmount  ;
+    }
+
+/*
+    function calculateCollateralTokensAmountEquivalentToPrincipalTokens(
+        uint256 principalTokenAmountValue
+    ) public view override returns (uint256 collateralTokensAmountToMatchValue) {
+
+            //this is not correct 
+        return
+            principalTokenAmountValue 
+            * mockMaxPrincipalPerCollateralAmount  ;
+    }*/
+
+
+
+
+/*
     function super_getPriceFromSqrtX96(uint160 _sqrtPriceX96) public pure returns (uint256 price_) {
 
         price_ =  super._getPriceFromSqrtX96(_sqrtPriceX96);
     }
 
-
+*/
 
 
 

@@ -90,8 +90,7 @@ contract TellerV2_initialize is Testable {
         );
     }
 
-/*
-    function test_getMetadataURI_without_mapping() public {
+  /*  function test_getMetadataURI_without_mapping() public {
         uint256 bidId = 1;
         setMockBid(1);
 

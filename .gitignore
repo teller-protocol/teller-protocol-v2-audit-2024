@@ -15,6 +15,7 @@ typechain
 
 # secrets
 *.secret
+packages/contracts/.env
 
 # Subgraph
 packages/subgraph/config/config.json
