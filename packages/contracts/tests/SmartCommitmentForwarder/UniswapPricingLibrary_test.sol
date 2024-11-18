@@ -1,123 +1,99 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
-import "../libraries/UniswapPricingLibrary.sol";
-import "../interfaces/uniswap/IUniswapV3Pool.sol";
-import "../interfaces/IUniswapPricingLibrary.sol";
-import "../libraries/uniswap/TickMath.sol";
-import "../libraries/uniswap/FixedPoint96.sol";
-import "../libraries/uniswap/FullMath.sol";
-
-contract UniswapPricingLibraryTest is Test {
-    using UniswapPricingLibrary for IUniswapPricingLibrary.PoolRouteConfig[];
-
-    IUniswapV3Pool mockPool1;
-    IUniswapV3Pool mockPool2;
-
-    function setUp() public {
-        // Create mock Uniswap V3 pools
-        mockPool1 = IUniswapV3Pool(address(0x1));
-        mockPool2 = IUniswapV3Pool(address(0x2));
-    }
-
-   function test_getUniswapPriceRatioForPoolRoutes_SingleRoute() public {
-    uint160 mockSqrtPriceX96 = 500000000000000000; // Mock sqrt price
-    uint32 twapInterval = 30; // Mock TWAP interval
+//import "forge-std/Test.sol";
+import "../../contracts/libraries/UniswapPricingLibrary.sol";
  
 
-    // Configure a single route
-    IUniswapPricingLibrary.PoolRouteConfig[] memory poutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
-        pool: address(mockPool1),
-        twapInterval: twapInterval,
-        zeroForOne: true
-    });
+import { Testable } from "../Testable.sol";
 
-    // Calculate the price ratio
-    uint256 priceRatio = UniswapPricingLibrary.getUniswapPriceRatioForPoolRoutes(poolRoutes);
+import { UniswapV3PoolMock } from "../../contracts/mock/uniswap/UniswapV3PoolMock.sol";
 
-    // Assert the price ratio is greater than zero
-    assertTrue(priceRatio > 0, "Price ratio should be calculated");
+import "../../contracts/mock/MarketRegistryMock.sol";
+
+
+import { IUniswapPricingLibrary } from "../../contracts/interfaces/IUniswapPricingLibrary.sol";
+
+import "../../contracts/TellerV2Context.sol";
+
+import "forge-std/console.sol";
+
+
+
+contract UniswapPricingLibraryTest is Testable {
+
+    LenderCommitmentForwarderTest_TellerV2Mock private tellerV2Mock;
+    MarketRegistryMock mockMarketRegistry;
+
+   // using UniswapPricingLibrary for IUniswapPricingLibrary.PoolRouteConfig[];
+
+    UniswapV3PoolMock mockUniswapPool;
+    UniswapV3PoolMock mockUniswapPoolSecondary;
+
+    function setUp() public {
+
+
+        tellerV2Mock = new LenderCommitmentForwarderTest_TellerV2Mock();
+        mockMarketRegistry = new MarketRegistryMock();
+
+        mockUniswapPool = new UniswapV3PoolMock();
+
+        mockUniswapPoolSecondary = new UniswapV3PoolMock();
+
+    }
+
+   function test_getUniswapPriceRatioForPool_same_price() public {
+        //collateralTokenDecimals = 6;
+
+        bool zeroForOne = false; // ??
+
+        mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+        uint32 twapInterval = 0;
+
+        IUniswapPricingLibrary.PoolRouteConfig
+            memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+                pool: address(mockUniswapPool),
+                zeroForOne: zeroForOne,
+                twapInterval: twapInterval,
+                token0Decimals: 18,
+                token1Decimals: 18
+            });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPool(routeConfig);
+
+        console.log("price ratio");
+        console.logUint(priceRatio);
+    }
+
+
+    
 }
 
-    function test_getUniswapPriceRatioForPoolRoutes_MultipleRoutes() public {
-        uint160 mockSqrtPriceX96_1 = 500000000000000000; // Mock sqrt price for pool 1
-        uint160 mockSqrtPriceX96_2 = 300000000000000000; // Mock sqrt price for pool 2
-        uint32 twapInterval = 30; // Mock TWAP interval
 
-        // Mock Uniswap pool behavior for pool 1
-        vm.mockCall(
-            address(mockPool1),
-            abi.encodeWithSelector(IUniswapV3Pool.slot0.selector),
-            abi.encode(mockSqrtPriceX96_1, 0, 0, 0, 0, 0, 0)
-        );
 
-        // Mock Uniswap pool behavior for pool 2
-        vm.mockCall(
-            address(mockPool2),
-            abi.encodeWithSelector(IUniswapV3Pool.slot0.selector),
-            abi.encode(mockSqrtPriceX96_2, 0, 0, 0, 0, 0, 0)
-        );
 
-        // Configure multiple routes
-        IUniswapPricingLibrary.PoolRouteConfig[] memory poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
-            pool: address(mockPool1),
-            twapInterval: twapInterval,
-            zeroForOne: true
-        });
-        poolRoutes[1] = IUniswapPricingLibrary.PoolRouteConfig({
-            pool: address(mockPool2),
-            twapInterval: twapInterval,
-            zeroForOne: false
-        });
+contract LenderCommitmentForwarderTest_TellerV2Mock is TellerV2Context {
+    constructor() TellerV2Context(address(0)) {}
 
-        uint256 priceRatio = poolRoutes.getUniswapPriceRatioForPoolRoutes();
-
-        assertTrue(priceRatio > 0, "Price ratio should be calculated for multiple routes");
+    function __setMarketRegistry(address _marketRegistry) external {
+        marketRegistry = IMarketRegistry(_marketRegistry);
     }
 
-    function test_getPriceX96FromSqrtPriceX96() public {
-        uint160 sqrtPriceX96 = 500000000000000000; // Mock sqrt price
-
-        uint256 priceX96 = UniswapPricingLibrary.getPriceX96FromSqrtPriceX96(sqrtPriceX96);
-
-        assertTrue(priceX96 > 0, "PriceX96 should be calculated");
+    function getSenderForMarket(uint256 _marketId)
+        external
+        view
+        returns (address)
+    {
+        return _msgSenderForMarket(_marketId);
     }
 
-    function test_getSqrtTwapX96_CurrentPrice() public {
-        uint160 mockSqrtPriceX96 = 500000000000000000; // Mock sqrt price
-
-        // Mock Uniswap pool `slot0`
-        vm.mockCall(
-            address(mockPool1),
-            abi.encodeWithSelector(IUniswapV3Pool.slot0.selector),
-            abi.encode(mockSqrtPriceX96, 0, 0, 0, 0, 0, 0)
-        );
-
-        uint160 sqrtPriceX96 = UniswapPricingLibrary.getSqrtTwapX96(
-            address(mockPool1),
-            0 // TWAP interval of 0 (current price)
-        );
-
-        assertEq(sqrtPriceX96, mockSqrtPriceX96, "Should return current sqrt price");
-    }
-
-    function test_getSqrtTwapX96_TWAPCalculation() public {
-        uint32 twapInterval = 30; // Mock TWAP interval
-        int56 tickCumulativeBefore = 1000000;
-        int56 tickCumulativeAfter = 2000000;
-
-        // Mock Uniswap pool `observe`
-        vm.mockCall(
-            address(mockPool1),
-            abi.encodeWithSelector(IUniswapV3Pool.observe.selector, new uint32 ),
-        bi.encode(new int56 , new uint160 )    );
-
-     nt160 sqrtPriceX96 = UniswapPricingLibrary.getSqrtTwapX96(
-            address(mockPool1),
-            twapInterval
-        );
-
-        assertTrue(sqrtPriceX96 > 0, "Should return calculated sqrt TWAP price");
+    function getDataForMarket(uint256 _marketId)
+        external
+        view
+        returns (bytes calldata)
+    {
+        return _msgDataForMarket(_marketId);
     }
 }

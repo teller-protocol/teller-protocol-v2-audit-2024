@@ -1,175 +1,172 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "forge-std/Test.sol";
-import "../../contracts/LenderCommitmentForwarder/SmartCommitmentForwarder.sol";
-import "../../contracts/interfaces/IMarketRegistry.sol";
-import "../../contracts/interfaces/ISmartCommitment.sol";
-import "../../contracts/interfaces/IPausableTimestamp.sol";
-import "../../contracts/interfaces/IProtocolPausingManager.sol";
+import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+//import "../../contracts/TellerV2MarketForwarder_G1.sol";
+import "../../contracts/TellerV2Context.sol";
+import {SmartCommitmentForwarder} from  "../../contracts/LenderCommitmentForwarder/SmartCommitmentForwarder.sol";
 
-contract SmartCommitmentForwarderTest is Test {
-    address protocolAddress = address(0x1);
-    address marketRegistryAddress = address(0x2);
-    address smartCommitmentAddress = address(0x3);
-    address collateralTokenAddress = address(0x4);
-    address borrower = address(0x5);
-    address recipient = address(0x6);
-    address protocolPauser = address(0x7);
-    address protocolOwner = address(0x8);
+import "../tokens/TestERC20Token.sol"; 
+//import "../../contracts/TellerV2Context.sol";
 
-    SmartCommitmentForwarder forwarder;
+import { ILenderCommitmentForwarder_U1 } from "../../contracts/interfaces/ILenderCommitmentForwarder_U1.sol";
+
+
+import { Testable } from "../Testable.sol";
+
+import "../../contracts/interfaces/ILenderCommitmentForwarder.sol";
+import { LenderCommitmentForwarder_G2 } from "../../contracts/LenderCommitmentForwarder/LenderCommitmentForwarder_G2.sol";
+
+import { Collateral, CollateralType } from "../../contracts/interfaces/escrow/ICollateralEscrowV1.sol";
+
+import { User } from "../Test_Helpers.sol";
+
+import "../../contracts/mock/MarketRegistryMock.sol";
+ 
+import { UniswapV3PoolMock } from "../../contracts/mock/uniswap/UniswapV3PoolMock.sol";
+
+import { UniswapV3FactoryMock } from "../../contracts/mock/uniswap/UniswapV3FactoryMock.sol";
+
+import "../../contracts/libraries/uniswap/FullMath.sol";
+
+import "forge-std/console.sol";
+
+ 
+
+ 
+
+
+contract SmartCommitmentForwarder_Test is Testable {
+    LenderCommitmentForwarderTest_TellerV2Mock private tellerV2Mock;
+    MarketRegistryMock mockMarketRegistry;
+
+    User private marketOwner;
+    User private lender;
+    User private borrower;
+
+    address[] emptyArray;
+    address[] borrowersArray;
+
+    TestERC20Token principalToken;
+    uint8 principalTokenDecimals = 18;
+
+    TestERC20Token collateralToken;
+    uint8 collateralTokenDecimals = 18;
+
+    TestERC20Token intermediateToken;
+    uint8 intermediateTokenDecimals = 18;
+ 
+
+    SmartCommitmentForwarder smartCommitmentForwarder;
+
+    uint256 maxPrincipal;
+    uint32 expiration;
+    uint32 maxDuration;
+    uint16 minInterestRate;
+    // address collateralTokenAddress;
+    uint256 collateralTokenId;
+    uint256 maxPrincipalPerCollateralAmount;
+    ILenderCommitmentForwarder_U1.CommitmentCollateralType collateralTokenType;
+
+    uint256 marketId;
+
+    UniswapV3FactoryMock mockUniswapFactory;
+    UniswapV3PoolMock mockUniswapPool;
+    UniswapV3PoolMock mockUniswapPoolSecondary;
+
+    //  address principalTokenAddress;
+
+    constructor() {}
 
     function setUp() public {
-        // Deploy the SmartCommitmentForwarder contract
-        forwarder = new SmartCommitmentForwarder(protocolAddress, marketRegistryAddress);
+        tellerV2Mock = new LenderCommitmentForwarderTest_TellerV2Mock();
+        mockMarketRegistry = new MarketRegistryMock();
 
-        // Mock ownership of the protocol
-        vm.mockCall(
-            protocolAddress,
-            abi.encodeWithSelector(Ownable.owner.selector),
-            abi.encode(protocolOwner)
+        mockUniswapFactory = new UniswapV3FactoryMock();
+        mockUniswapPool = new UniswapV3PoolMock();
+
+        mockUniswapPoolSecondary = new UniswapV3PoolMock();
+
+        smartCommitmentForwarder = new SmartCommitmentForwarder(
+            address(tellerV2Mock),
+            address(mockMarketRegistry)
+            //address(mockUniswapFactory)
         );
 
-        // Mock pausing manager to return the protocol pauser
-        address pausingManager = address(0x9);
-        vm.mockCall(
-            protocolAddress,
-            abi.encodeWithSelector(IHasProtocolPausingManager.getProtocolPausingManager.selector),
-            abi.encode(pausingManager)
+        marketOwner = new User( address(tellerV2Mock)  );
+        borrower = new User( address(tellerV2Mock)  );
+        lender = new User( address(tellerV2Mock)  );
+
+        tellerV2Mock.__setMarketRegistry(address(mockMarketRegistry));
+        mockMarketRegistry.setMarketOwner(address(marketOwner));
+
+        //tokenAddress = address(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174);
+        marketId = 2;
+        maxPrincipal = 100000000000000000000;
+        maxPrincipalPerCollateralAmount = 100;
+        maxDuration = 2480000;
+        minInterestRate = 3000;
+        expiration = uint32(block.timestamp) + uint32(64000);
+
+        marketOwner.setTrustedMarketForwarder(
+            marketId,
+            address(smartCommitmentForwarder)
         );
-        vm.mockCall(
-            pausingManager,
-            abi.encodeWithSelector(IProtocolPausingManager.isPauser.selector, protocolPauser),
-            abi.encode(true)
+        lender.approveMarketForwarder(
+            marketId,
+            address(smartCommitmentForwarder)
         );
+
+        borrowersArray = new address[](1);
+        borrowersArray[0] = address(borrower);
+
+        principalToken = new TestERC20Token(
+            "Test Wrapped ETH",
+            "TWETH",
+            0,
+            principalTokenDecimals
+        );
+
+        collateralToken = new TestERC20Token(
+            "Test USDC",
+            "TUSDC",
+            0,
+            collateralTokenDecimals
+        );
+
+        
     }
 
-    function test_setLiquidationProtocolFeePercent() public {
-        vm.startPrank(protocolOwner);
 
-        uint256 newFeePercent = 500; // 5%
-        forwarder.setLiquidationProtocolFeePercent(newFeePercent);
 
-        assertEq(forwarder.getLiquidationProtocolFeePercent(), newFeePercent);
-        vm.stopPrank();
+
+  
+  
+
+}
+ 
+//Move to a helper file !
+contract LenderCommitmentForwarderTest_TellerV2Mock is TellerV2Context {
+    constructor() TellerV2Context(address(0)) {}
+
+    function __setMarketRegistry(address _marketRegistry) external {
+        marketRegistry = IMarketRegistry(_marketRegistry);
     }
 
-    function test_setLiquidationProtocolFeePercent_RevertsIfNotOwner() public {
-        uint256 newFeePercent = 500; // 5%
-        vm.expectRevert("Sender not authorized");
-        forwarder.setLiquidationProtocolFeePercent(newFeePercent);
+    function getSenderForMarket(uint256 _marketId)
+        external
+        view
+        returns (address)
+    {
+        return _msgSenderForMarket(_marketId);
     }
 
-    function test_acceptSmartCommitmentWithRecipient() public {
-        uint256 principalAmount = 1000 ether;
-        uint256 collateralAmount = 500 ether;
-        uint256 collateralTokenId = 1;
-        uint16 interestRate = 500; // 5%
-        uint32 loanDuration = 30 days;
-
-        // Mock the Smart Commitment contract
-        vm.mockCall(
-            smartCommitmentAddress,
-            abi.encodeWithSelector(ISmartCommitment.getCollateralTokenType.selector),
-            abi.encode(CommitmentCollateralType.ERC20)
-        );
-        vm.mockCall(
-            smartCommitmentAddress,
-            abi.encodeWithSelector(ISmartCommitment.getMarketId.selector),
-            abi.encode(1)
-        );
-        vm.mockCall(
-            smartCommitmentAddress,
-            abi.encodeWithSelector(ISmartCommitment.getPrincipalTokenAddress.selector),
-            abi.encode(address(0x10))
-        );
-
-        // Mock the submission of a bid
-        uint256 bidId = 12345;
-        vm.mockCall(
-            protocolAddress,
-            abi.encodeWithSelector(
-                TellerV2MarketForwarder_G3._submitBidWithCollateral.selector
-            ),
-            abi.encode(bidId)
-        );
-
-        // Mock accepting funds for the bid
-        vm.mockCall(
-            smartCommitmentAddress,
-            abi.encodeWithSelector(
-                ISmartCommitment.acceptFundsForAcceptBid.selector,
-                borrower,
-                bidId,
-                principalAmount,
-                collateralAmount,
-                collateralTokenAddress,
-                collateralTokenId,
-                loanDuration,
-                interestRate
-            ),
-            ""
-        );
-
-        // Call the function and verify bid creation
-        uint256 createdBidId = forwarder.acceptSmartCommitmentWithRecipient(
-            smartCommitmentAddress,
-            principalAmount,
-            collateralAmount,
-            collateralTokenId,
-            collateralTokenAddress,
-            recipient,
-            interestRate,
-            loanDuration
-        );
-
-        assertEq(createdBidId, bidId);
-    }
-
-    function test_pause() public {
-        vm.startPrank(protocolPauser);
-
-        forwarder.pause();
-        assertTrue(forwarder.paused());
-
-        vm.stopPrank();
-    }
-
-    function test_unpause() public {
-        vm.startPrank(protocolPauser);
-
-        forwarder.pause();
-        forwarder.unpause();
-
-        assertFalse(forwarder.paused());
-        vm.stopPrank();
-    }
-
-    function test_pause_RevertsIfNotPauser() public {
-        vm.expectRevert("Sender not authorized");
-        forwarder.pause();
-    }
-
-    function test_setOracle() public {
-        vm.startPrank(protocolOwner);
-
-        address newOracle = address(0x11);
-        forwarder.setOracle(newOracle);
-
-        assertEq(forwarder.getOracle(), newOracle);
-        vm.stopPrank();
-    }
-
-    function test_setIsStrictMode() public {
-        vm.startPrank(protocolOwner);
-
-        forwarder.setIsStrictMode(true);
-        assertTrue(forwarder.isStrictMode());
-
-        forwarder.setIsStrictMode(false);
-        assertFalse(forwarder.isStrictMode());
-
-        vm.stopPrank();
+    function getDataForMarket(uint256 _marketId)
+        external
+        view
+        returns (bytes calldata)
+    {
+        return _msgDataForMarket(_marketId);
     }
 }
