@@ -43,6 +43,9 @@ ROLES
     Any protocol pauser can pause and unpause this contract 
 
     Anyone can call  registerOracle  to register a contract for use (firewall access)
+
+
+
 */
  
 contract SmartCommitmentForwarder is
@@ -262,15 +265,12 @@ contract SmartCommitmentForwarder is
     public view 
     returns (uint256) {
 
-
         address pausingManager = IHasProtocolPausingManager( _tellerV2 ).getProtocolPausingManager();
        
         return MathUpgradeable.max(
             lastUnpausedAt,
             IPausableTimestamp(pausingManager).getLastUnpausedAt()
-        )
-        ;
- 
+        );
 
     }
 

@@ -3,12 +3,15 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-//import "../../contracts/TellerV2MarketForwarder_G1.sol";
+
 import "../../contracts/TellerV2Context.sol";
+
+
+import "../../contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Smart.sol";
+import "../../contracts/LenderCommitmentForwarder/extensions/LenderCommitmentGroup/LenderCommitmentGroup_Factory.sol";
 import {SmartCommitmentForwarder} from  "../../contracts/LenderCommitmentForwarder/SmartCommitmentForwarder.sol";
 
-import "../tokens/TestERC20Token.sol"; 
-//import "../../contracts/TellerV2Context.sol";
+import "../tokens/TestERC20Token.sol";  
 
 import { ILenderCommitmentForwarder_U1 } from "../../contracts/interfaces/ILenderCommitmentForwarder_U1.sol";
 
@@ -28,6 +31,10 @@ import { UniswapV3PoolMock } from "../../contracts/mock/uniswap/UniswapV3PoolMoc
 
 import { UniswapV3FactoryMock } from "../../contracts/mock/uniswap/UniswapV3FactoryMock.sol";
 
+import { ILenderCommitmentGroup } from "../../contracts/interfaces/ILenderCommitmentGroup.sol";
+
+import { IUniswapPricingLibrary } from "../../contracts/interfaces/IUniswapPricingLibrary.sol";
+
 import "../../contracts/libraries/uniswap/FullMath.sol";
 
 import "forge-std/console.sol";
@@ -37,9 +44,11 @@ import "forge-std/console.sol";
  
 
 
-contract SmartCommitmentForwarder_Test is Testable {
+contract LenderCommitmentGroupFactory_Test is Testable {
     LenderCommitmentForwarderTest_TellerV2Mock private tellerV2Mock;
     MarketRegistryMock mockMarketRegistry;
+
+    LenderCommitmentGroup_Factory factory ;
 
     User private marketOwner;
     User private lender;
@@ -96,6 +105,12 @@ contract SmartCommitmentForwarder_Test is Testable {
 
         smartCommitmentForwarder.initialize();
 
+
+        lenderGroupPoolBeacon = new LenderCommitmentGroup_Smart();  // ???
+
+        factory = new LenderCommitmentGroup_Factory();
+        factory.initialize( lenderGroupPoolBeacon );
+
         marketOwner = new User( address(tellerV2Mock)  );
         borrower = new User( address(tellerV2Mock)  );
         lender = new User( address(tellerV2Mock)  );
@@ -137,57 +152,66 @@ contract SmartCommitmentForwarder_Test is Testable {
             collateralTokenDecimals
         );
 
-        
     }
 
+ 
 
-    function setLiquidationProtocolFeePercent_test(){
-
-
-
+     function deployPool_testl() {
 
 
-    }
+        uint256 initialPrincipalAmount = 10000000;
 
-    function acceptSmartCommitmentWithRecipient_test(){
+         ILenderCommitmentGroup.CommitmentGroupConfig memory groupConfig = ILenderCommitmentGroup.CommitmentGroupConfig({
+            principalTokenAddress: _principalTokenAddress,
+            collateralTokenAddress: _collateralTokenAddress,
+            marketId: _marketId,
+            maxLoanDuration: _maxLoanDuration,
+            interestRateLowerBound: _interestRateLowerBound,
+            interestRateUpperBound: _interestRateUpperBound,
+            liquidityThresholdPercent: _liquidityThresholdPercent,
+            collateralRatio: _collateralRatio 
+        });
 
 
-        vm.prank(address(borrower));
 
-        smartCommitmentForwarder.acceptSmartCommitmentWithRecipient(
-            address(mockLenderGroupPool),
-            principalAmount,
-            collateralAmount,
-            0,
-            address(collateralTokenAddress),
-            address(borrower),
-            interestRate,
-            loanDuration
+           IUniswapPricingLibrary.PoolRouteConfig
+            memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+                pool: address(_uniswapV3Pool),
+                zeroForOne: zeroForOne,
+                twapInterval: twapInterval,
+                token0Decimals: 18,
+                token1Decimals: 18
+            });
+
+
+          IUniswapPricingLibrary.PoolRouteConfig[]
+            memory routesConfig = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            );
+
+
+ 
+        factory.deployLenderCommitmentGroupPool(
+            initialPrincipalAmount,
+            commitmentGroupConfig,
+            poolOracleRoutes
         );
 
+    }
+    function deployPool_test_no_principal() {
+
+
+
+ 
+        factory.deployLenderCommitmentGroupPool(
+            initialPrincipalAmount,
+            commitmentGroupConfig,
+            poolOracleRoutes
+        );
 
     }
 
-
-     function pause_test(){
-
-
-        
-    }
-
-      function unpause_test(){
-
-
-        
-    }
-
-    function setOracle_test(){
-
-
-        
-    }
-
-
+ 
 
   
   
