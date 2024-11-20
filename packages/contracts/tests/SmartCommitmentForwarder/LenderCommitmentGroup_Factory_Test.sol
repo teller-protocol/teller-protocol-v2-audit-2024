@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
+
 
 import "../../contracts/TellerV2Context.sol";
 
@@ -48,7 +50,7 @@ contract LenderCommitmentGroupFactory_Test is Testable {
     LenderCommitmentForwarderTest_TellerV2Mock private tellerV2Mock;
     MarketRegistryMock mockMarketRegistry;
 
-    LenderCommitmentGroup_Factory factory ;
+    LenderCommitmentGroupFactory factory ;
 
     User private marketOwner;
     User private lender;
@@ -104,11 +106,20 @@ contract LenderCommitmentGroupFactory_Test is Testable {
         );
 
         smartCommitmentForwarder.initialize();
+ 
+    
+        LenderCommitmentGroup_Smart lenderGroupPoolImplementation = new LenderCommitmentGroup_Smart(
+            address(tellerV2Mock),
+            address(smartCommitmentForwarder),
+            address(mockUniswapFactory)
+
+        );
+         // Step 4: Deploy the Beacon with the implementation
+        UpgradeableBeacon lenderGroupPoolBeacon = new UpgradeableBeacon(address(lenderGroupPoolImplementation));
 
 
-        lenderGroupPoolBeacon = new LenderCommitmentGroup_Smart();  // ???
 
-        factory = new LenderCommitmentGroup_Factory();
+        factory = new LenderCommitmentGroupFactory();
         factory.initialize( lenderGroupPoolBeacon );
 
         marketOwner = new User( address(tellerV2Mock)  );
@@ -157,6 +168,9 @@ contract LenderCommitmentGroupFactory_Test is Testable {
  
 
      function deployPool_testl() {
+
+        address _principalTokenAddress = address(principalToken);
+        address _collateralTokenAddress = address(collateralTokenAddress);
 
 
         uint256 initialPrincipalAmount = 10000000;
