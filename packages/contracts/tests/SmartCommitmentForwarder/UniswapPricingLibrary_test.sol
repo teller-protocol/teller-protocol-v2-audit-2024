@@ -130,6 +130,241 @@ contract UniswapPricingLibraryTest is Testable {
     }
 
 
+   function test_getUniswapPriceRatioForPoolRoutes_decimal_scenario_B()
+        public
+    {
+        mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+        mockUniswapPoolSecondary.set_mockSqrtPriceX96(1 * 2**96);
+
+        uint32 twapInterval = 0; //for now
+
+        bool zeroForOne = true;
+
+        uint256 principalTokenDecimals = 18;
+        uint256 intermediateTokenDecimals = 18;
+        uint256 collateralTokenDecimals = 6;
+
+        
+
+        IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                2
+            );
+
+        poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPool),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: collateralTokenDecimals,
+            token1Decimals: intermediateTokenDecimals
+        });
+
+        poolRoutes[1] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPoolSecondary),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: intermediateTokenDecimals,
+            token1Decimals: principalTokenDecimals
+        });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+        console.log("price ratio");
+        console.logUint(priceRatio);
+ 
+         assertEq(  1e18 , priceRatio  , "unexpected price ratio") ;
+    }
+
+    function test_getUniswapPriceRatioForPoolRoutes_decimal_scenario_C()
+        public
+    {
+        mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+        mockUniswapPoolSecondary.set_mockSqrtPriceX96(1 * 2**96);
+
+        uint32 twapInterval = 0; //for now
+
+        bool zeroForOne = true;
+
+        uint256 principalTokenDecimals = 6;
+        uint256 intermediateTokenDecimals = 18;
+        uint256 collateralTokenDecimals = 18;
+
+       
+        IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                2
+            );
+
+        poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPool),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: collateralTokenDecimals,
+            token1Decimals: intermediateTokenDecimals
+        });
+
+        poolRoutes[1] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPoolSecondary),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: intermediateTokenDecimals,
+            token1Decimals: principalTokenDecimals
+        });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+        
+        console.log("price ratio");
+        console.logUint(priceRatio);
+    
+
+         assertEq(  1e18 , priceRatio  , "unexpected price ratio") ;
+    }
+
+
+     function test_getUniswapPriceRatioForPoolRoutes_price_scenario_A() public {
+        mockUniswapPool.set_mockSqrtPriceX96(10 * 2**96);
+
+        uint160 priceTwo = uint160(1 * 2**96) ;
+        mockUniswapPoolSecondary.set_mockSqrtPriceX96(priceTwo);
+
+        uint32 twapInterval = 0; //for now
+
+        bool zeroForOne = false;
+
+        IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                2
+            );
+
+        poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPool),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: 18,
+            token1Decimals: 18
+        });
+
+        poolRoutes[1] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPoolSecondary),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: 18,
+            token1Decimals: 18
+        });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+        console.log("price ratio");
+        console.logUint(priceRatio);
+ 
+      
+         assertEq(  1e16 , priceRatio  , "unexpected price ratio") ;
+    }
+
+
+     function test_getUniswapPriceRatioForPoolRoutes_price_scenario_B() public {
+        mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+        uint32 twapInterval = 0; //for now
+
+        bool zeroForOne = false;
+
+        IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            );
+
+        poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPool),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: 18,
+            token1Decimals: 18
+        });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+        console.log("price ratio");
+        console.logUint(priceRatio);
+
+          
+          assertEq(  1e18 , priceRatio  , "unexpected price ratio") ;
+    }
+
+
+ function test_getUniswapPriceRatioForPoolRoutes_price_scenario_C() public {
+        mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+        uint32 twapInterval = 0; //for now
+
+        bool zeroForOne = true;
+
+        IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            );
+
+        poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPool),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: 18,
+            token1Decimals: 18
+        });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+        console.log("price ratio");
+        console.logUint(priceRatio);
+
+       
+       assertEq(  1e18 , priceRatio  , "unexpected price ratio") ;
+        
+    }
+
+    function test_getUniswapPriceRatioForPoolRoutes_price_scenario_D() public {
+        mockUniswapPool.set_mockSqrtPriceX96(81128457937705300000000);
+
+        uint32 twapInterval = 0; //for now
+
+        bool zeroForOne = false;
+
+        
+        IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            );
+
+        poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+            pool: address(mockUniswapPool),
+            zeroForOne: zeroForOne,
+            twapInterval: twapInterval,
+            token0Decimals: 6,
+            token1Decimals: 18
+        });
+
+        uint256 priceRatio = UniswapPricingLibrary
+            .getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+        console.log("price ratio");
+        console.logUint(priceRatio);
+
+        uint256 principalAmount = 1000;
+
+     
+        assertEq(  953702069891996282433059426929 , priceRatio  , "unexpected price ratio") ;
+       
+    }
+
+
 
     
 }
