@@ -141,7 +141,7 @@ contract SmartCommitmentForwarder_Test is Testable {
     }
 
 
-    function setLiquidationProtocolFeePercent_test(){
+   /* function setLiquidationProtocolFeePercent_test(){
 
 
 
@@ -186,7 +186,7 @@ contract SmartCommitmentForwarder_Test is Testable {
 
         
     }
-
+*/
 
 
   

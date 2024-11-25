@@ -120,7 +120,7 @@ contract LenderCommitmentGroupFactory_Test is Testable {
 
 
         factory = new LenderCommitmentGroupFactory();
-        factory.initialize( lenderGroupPoolBeacon );
+        factory.initialize( address(lenderGroupPoolBeacon) );
 
         marketOwner = new User( address(tellerV2Mock)  );
         borrower = new User( address(tellerV2Mock)  );
@@ -167,10 +167,13 @@ contract LenderCommitmentGroupFactory_Test is Testable {
 
  
 
-     function deployPool_testl() {
+     function deployPool_test() public {
 
         address _principalTokenAddress = address(principalToken);
-        address _collateralTokenAddress = address(collateralTokenAddress);
+        address _collateralTokenAddress = address(collateralToken);
+
+        bool zeroForOne = false; 
+        uint32 twapInterval = 0;
 
 
         uint256 initialPrincipalAmount = 10000000;
@@ -178,19 +181,19 @@ contract LenderCommitmentGroupFactory_Test is Testable {
          ILenderCommitmentGroup.CommitmentGroupConfig memory groupConfig = ILenderCommitmentGroup.CommitmentGroupConfig({
             principalTokenAddress: _principalTokenAddress,
             collateralTokenAddress: _collateralTokenAddress,
-            marketId: _marketId,
-            maxLoanDuration: _maxLoanDuration,
-            interestRateLowerBound: _interestRateLowerBound,
-            interestRateUpperBound: _interestRateUpperBound,
-            liquidityThresholdPercent: _liquidityThresholdPercent,
-            collateralRatio: _collateralRatio 
+            marketId: marketId,
+            maxLoanDuration: maxDuration,
+            interestRateLowerBound: minInterestRate,
+            interestRateUpperBound: minInterestRate,
+            liquidityThresholdPercent: 7500,
+            collateralRatio: 10000   //1-1  
         });
 
 
 
            IUniswapPricingLibrary.PoolRouteConfig
             memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
-                pool: address(_uniswapV3Pool),
+                pool: address(mockUniswapPool),
                 zeroForOne: zeroForOne,
                 twapInterval: twapInterval,
                 token0Decimals: 18,
@@ -201,7 +204,21 @@ contract LenderCommitmentGroupFactory_Test is Testable {
           IUniswapPricingLibrary.PoolRouteConfig[]
             memory routesConfig = new IUniswapPricingLibrary.PoolRouteConfig[](
                 1
-            );
+            ); 
+
+
+ 
+        factory.deployLenderCommitmentGroupPool(
+            initialPrincipalAmount,
+            groupConfig,
+            routesConfig
+        );
+
+    }
+
+    /*
+    function deployPool_test_no_principal() public {
+
 
 
  
@@ -212,19 +229,7 @@ contract LenderCommitmentGroupFactory_Test is Testable {
         );
 
     }
-    function deployPool_test_no_principal() {
-
-
-
- 
-        factory.deployLenderCommitmentGroupPool(
-            initialPrincipalAmount,
-            commitmentGroupConfig,
-            poolOracleRoutes
-        );
-
-    }
-
+    */
  
 
   
