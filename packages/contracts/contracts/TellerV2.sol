@@ -22,7 +22,7 @@ import "./interfaces/ILoanRepaymentListener.sol";
 
 // Libraries
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "./openzeppelin/SafeERC20.sol";
 
 import "./libraries/NumbersLib.sol";
 
@@ -874,6 +874,7 @@ contract TellerV2 is
                 lender,
                 _paymentAmount
             )
+            
         {} catch {
             address sender = _msgSenderForMarket(bid.marketplaceId);
 
@@ -895,7 +896,7 @@ contract TellerV2 is
             //used for fee-on-send tokens
             uint256 paymentAmountReceived = balanceAfter - balanceBefore;
 
-            bid.loanDetails.lendingToken.approve(
+            bid.loanDetails.lendingToken.forceApprove(
                 address(escrowVault),
                 paymentAmountReceived
             );
