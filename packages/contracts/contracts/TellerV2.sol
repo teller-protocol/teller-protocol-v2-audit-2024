@@ -889,6 +889,8 @@ contract TellerV2 is
              );
                   
             if  (!transferSuccess) {  
+                //could not send funds due to an issue with lender (denylisted?) so we are going to try and send the funds to the
+                // escrow wallet FOR the lender to be able to retrieve at a later time when they are no longer denylisted by the token  
             
                 address sender = _msgSenderForMarket(bid.marketplaceId);
 
