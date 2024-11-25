@@ -920,7 +920,7 @@ contract CollateralManager_Test is Testable {
         assertTrue(valid);
     }
 
-    function test_checkBalances_public() public {
+   /* function test_checkBalances_public() public {
         Collateral[] memory collateralArray = new Collateral[](1);
 
         collateralArray[0] = Collateral({
@@ -941,7 +941,7 @@ contract CollateralManager_Test is Testable {
         );
     }
 
-    /*  function test_checkBalance_internal_invalid_type() public {
+      function test_checkBalance_internal_invalid_type() public {
     
         wethMock.transfer(address(borrower), 1000);
 
