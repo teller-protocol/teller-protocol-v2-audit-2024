@@ -173,7 +173,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
      * @return validation_ Boolean indicating if the collateral balance was validated.
      */
     function revalidateCollateral(uint256 _bidId)
-        external
+        external view
         returns (bool validation_)
     {
         Collateral[] memory collateralInfos = getCollateralInfo(_bidId);
@@ -189,7 +189,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
     function checkBalances(
         address _borrowerAddress,
         Collateral[] calldata _collateralInfo
-    ) public returns (bool validated_, bool[] memory checks_) {
+    ) public view returns (bool validated_, bool[] memory checks_) {
         return _checkBalances(_borrowerAddress, _collateralInfo, false);
     }
 
@@ -536,7 +536,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
         address _borrowerAddress,
         Collateral[] memory _collateralInfo,
         bool _shortCircut
-    ) internal virtual returns (bool validated_, bool[] memory checks_) {
+    ) internal virtual view returns (bool validated_, bool[] memory checks_) {
         checks_ = new bool[](_collateralInfo.length);
         validated_ = true;
         for (uint256 i; i < _collateralInfo.length; i++) {
@@ -564,7 +564,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
     function _checkBalance(
         address _borrowerAddress,
         Collateral memory _collateralInfo
-    ) internal virtual returns (bool) {
+    ) internal virtual view returns (bool) {
         CollateralType collateralType = _collateralInfo._collateralType;
 
         if (collateralType == CollateralType.ERC20) {
