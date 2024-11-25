@@ -22,7 +22,7 @@ import "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import "../../contracts/LenderCommitmentForwarder/LenderCommitmentForwarder_G1.sol";
 import "../tokens/TestERC20Token.sol";
 
-import "../../contracts/CollateralManager.sol";
+import {CollateralManager} from  "../../contracts/CollateralManager.sol";
 import { Collateral } from "../../contracts/interfaces/escrow/ICollateralEscrowV1.sol";
 import { PaymentType } from "../../contracts/libraries/V2Calculations.sol";
 import { BidState, Payment } from "../../contracts/TellerV2Storage.sol";
