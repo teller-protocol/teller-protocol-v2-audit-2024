@@ -945,6 +945,8 @@ contract TellerV2 is
 
     /*
       A try/catch pattern for safeTransferERC20 that helps support standard ERC20 tokens and non-standard ones like USDT 
+
+      @notice  If the token address is an EOA, callSuccess will always be true so token address should always be a contract. 
     */
     function safeTransferFromERC20Custom(
 
