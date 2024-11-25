@@ -66,6 +66,9 @@ contract CollateralManager_Override is CollateralManager {
         Collateral[] memory _collateralInfo,
         bool _shortCircut
     ) public returns (bool validated_, bool[] memory checks_) {
+
+        checkBalancesWasCalled = true;
+
         return
             super._checkBalances(
                 _borrowerAddress,
@@ -78,6 +81,9 @@ contract CollateralManager_Override is CollateralManager {
         address _borrowerAddress,
         Collateral memory _collateralInfo
     ) public returns (bool) {
+
+        checkBalanceWasCalled = true;
+
         return super._checkBalance(_borrowerAddress, _collateralInfo);
     }
 
@@ -116,8 +122,8 @@ contract CollateralManager_Override is CollateralManager {
         address _borrowerAddress,
         Collateral[] memory _collateralInfo,
         bool _shortCircut
-    ) internal override returns (bool validated_, bool[] memory checks_) {
-        checkBalancesWasCalled = true;
+    ) internal override view returns (bool validated_, bool[] memory checks_) {
+        //checkBalancesWasCalled = true;
 
         validated_ = checkBalanceGlobalValid;
         checks_ = new bool[](0);
@@ -133,8 +139,8 @@ contract CollateralManager_Override is CollateralManager {
     function _checkBalance(
         address _borrowerAddress,
         Collateral memory _collateralInfo
-    ) internal override returns (bool) {
-        checkBalanceWasCalled = true;
+    ) internal override view  returns (bool) {
+        //checkBalanceWasCalled = true;
 
         return checkBalanceGlobalValid;
     }
