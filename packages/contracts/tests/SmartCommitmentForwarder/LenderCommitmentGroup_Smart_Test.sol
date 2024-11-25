@@ -337,7 +337,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
       vm.prank(address(lender));
 
-        lenderCommitmentGroupSmart.prepareSharesForWithdraw(sharesAmount);
+        lenderCommitmentGroupSmart.prepareSharesForBurn(sharesAmount);
 
         vm.warp(1000);
 
@@ -391,7 +391,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          vm.prank(address(lender));
 
-        lenderCommitmentGroupSmart.prepareSharesForWithdraw(sharesAmount);
+        lenderCommitmentGroupSmart.prepareSharesForBurn(sharesAmount);
 
         vm.warp(1000);
 
@@ -445,7 +445,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
         vm.prank(address(lender));
 
-        lenderCommitmentGroupSmart.prepareSharesForWithdraw(sharesAmount);
+        lenderCommitmentGroupSmart.prepareSharesForBurn(sharesAmount);
 
         vm.warp(1000);
 

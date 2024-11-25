@@ -43,13 +43,13 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
 
 
 
-  function mock_prepareSharesForWithdraw(
+   /* function mock_prepareSharesForWithdraw(
         uint256 _amountPoolSharesTokens
     ) external   {
         poolSharesPreparedToWithdrawForLender[msg.sender] = _amountPoolSharesTokens; 
         poolSharesPreparedTimestamp[msg.sender] = block.timestamp;
        
-    } 
+    } */
 
 
     function getMinimumAmountDifferenceToCloseDefaultedLoan(
