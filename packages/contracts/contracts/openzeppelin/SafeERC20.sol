@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v5.1.0) (token/ERC20/utils/SafeERC20.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -109,7 +109,7 @@ library SafeERC20 {
     function _callOptionalReturn(IERC20 token, bytes memory data) private {
         uint256 returnSize;
         uint256 returnValue;
-        assembly ("memory-safe") {
+        assembly  {  //  ("memory-safe")
             let success := call(gas(), token, 0, add(data, 0x20), mload(data), 0, 0x20)
             // bubble errors
             if iszero(success) {
@@ -138,7 +138,7 @@ library SafeERC20 {
         bool success;
         uint256 returnSize;
         uint256 returnValue;
-        assembly ("memory-safe") {
+        assembly { //  ("memory-safe")
             success := call(gas(), token, 0, add(data, 0x20), mload(data), 0, 0x20)
             returnSize := returndatasize()
             returnValue := mload(0)

@@ -921,13 +921,13 @@ contract TellerV2 is
 
                 bid.loanDetails.lendingToken.forceApprove(
                     address(escrowVault),
-                    paymentAmountReceived
+                    _paymentAmount
                 );
 
                 IEscrowVault(escrowVault).deposit(
                     lender,
                     address(bid.loanDetails.lendingToken),
-                    paymentAmountReceived
+                    _paymentAmount
                 );
 
 

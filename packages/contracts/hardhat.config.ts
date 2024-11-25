@@ -264,7 +264,7 @@ export default <HardhatUserConfig>{
   solidity: {
     compilers: [
       {
-        version: '0.8.9',
+        version: '0.8.11',
         settings: {
           optimizer: {
             enabled: true, // !isTesting, //need this for now due to large size of tellerV2.test
