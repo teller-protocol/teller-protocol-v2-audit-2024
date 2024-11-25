@@ -38,8 +38,6 @@ contract ProtocolPausingManager is ContextUpgradeable, OwnableUpgradeable, IProt
     //bool private _liquidityPoolsPaused;    
 
 
-    // u8 private _currentPauseState;  //use an enum !!! 
-
     mapping(address => bool) public  pauserRoleBearer;
 
 
@@ -86,18 +84,6 @@ contract ProtocolPausingManager is ContextUpgradeable, OwnableUpgradeable, IProt
     }
 
    
-   /*
-    function _requireNotPaused() internal view virtual {
-        require(!paused(), "Pausable: paused");
-    }
-
-         function _requirePaused() internal view virtual {
-        require(paused(), "Pausable: not paused");
-    }
-    */
-   
-
-
 
 
     function pauseProtocol() public virtual onlyPauser {

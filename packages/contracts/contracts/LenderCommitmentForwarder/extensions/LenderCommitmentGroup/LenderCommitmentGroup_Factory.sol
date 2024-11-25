@@ -35,6 +35,10 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
 
  
 
+      /**
+     * @notice Initializes the factory contract.
+     * @param _lenderGroupBeacon The address of the beacon proxy used for deploying group contracts.
+     */
      function initialize(address _lenderGroupBeacon )
         external
         initializer
@@ -44,11 +48,14 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
     }
 
 
-    /*
-        This should deploy a new lender commitment group pool contract.
-        It will use create commitment args in order to define the pool contracts parameters such as its primary principal token.  
-        Shares will be distributed at a 1:1 ratio of the primary principal token so if 1e18 raw WETH are deposited, the depositor gets 1e18 shares for the group pool.
-    */
+ /**
+     * @notice Deploys a new lender commitment group pool contract.
+     * @dev The function initializes the deployed contract and optionally adds an initial principal amount.
+     * @param _initialPrincipalAmount The initial principal amount to be deposited into the group contract.
+     * @param _commitmentGroupConfig Configuration parameters for the lender commitment group.
+     * @param _poolOracleRoutes Array of pool route configurations for the Uniswap pricing library.
+     * @return newGroupContract_ Address of the newly deployed group contract.
+     */
     function deployLenderCommitmentGroupPool(
         uint256 _initialPrincipalAmount,
         ILenderCommitmentGroup.CommitmentGroupConfig calldata _commitmentGroupConfig,
@@ -74,19 +81,12 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
 
         //it is not absolutely necessary to have this call here but it allows the user to potentially save a tx step so it is nice to have .
          if (_initialPrincipalAmount > 0) {
-            //should pull in the creators initial committed principal tokens .
-
-            //send the initial principal tokens to _newgroupcontract here !
-            // so it will have them for addPrincipalToCommitmentGroup which will pull them from here
-
-            _addPrincipalToCommitmentGroup(
+                _addPrincipalToCommitmentGroup(
                 address(newGroupContract_),
                 _initialPrincipalAmount,
                 _commitmentGroupConfig.principalTokenAddress 
                 
-            );
-
-            
+            ); 
         } 
 
 
@@ -96,7 +96,12 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
     }
 
 
-
+    /**
+     * @notice Adds principal tokens to a commitment group.
+     * @param _newGroupContract The address of the group contract to add principal tokens to.
+     * @param _initialPrincipalAmount The amount of principal tokens to add.
+     * @param _principalTokenAddress The address of the principal token contract.
+     */
     function _addPrincipalToCommitmentGroup(
         address _newGroupContract,
         uint256 _initialPrincipalAmount,

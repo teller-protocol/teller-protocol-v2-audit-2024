@@ -225,6 +225,12 @@ contract LenderCommitmentGroup_Smart is
 
     );
 
+    event WithdrawFromEscrow(
+       
+        uint256  indexed amount
+
+    );
+
 
     modifier onlySmartCommitmentForwarder() {
         require(
@@ -287,11 +293,12 @@ contract LenderCommitmentGroup_Smart is
         UNISWAP_V3_FACTORY = _uniswapV3Factory;
     }
 
-    /*
-
-
-        
-    */
+    /**
+     * @notice Initializes the LenderCommitmentGroup_Smart contract.
+     * @param _commitmentGroupConfig Configuration for the commitment group (lending pool).
+     * @param _poolOracleRoutes Route configuration for the principal/collateral oracle.
+     * @return poolSharesToken_ Address of the deployed pool shares token.
+     */
    function initialize(
        CommitmentGroupConfig calldata _commitmentGroupConfig,
        IUniswapPricingLibrary.PoolRouteConfig[] calldata _poolOracleRoutes
@@ -302,24 +309,12 @@ contract LenderCommitmentGroup_Smart is
 
         principalToken = IERC20(_commitmentGroupConfig.principalTokenAddress);
         collateralToken = IERC20(_commitmentGroupConfig.collateralTokenAddress);
-        /*uniswapPoolFee = _commitmentGroupConfig.uniswapPoolFee;
-
-        UNISWAP_V3_POOL = IUniswapV3Factory(UNISWAP_V3_FACTORY).getPool(
-            _commitmentGroupConfig.principalTokenAddress,
-            _commitmentGroupConfig.collateralTokenAddress,
-            _commitmentGroupConfig.uniswapPoolFee
-        );*/
-
-        //require(_commitmentGroupConfig.twapInterval >= MIN_TWAP_INTERVAL, "Invalid TWAP Interval");
-        // require(UNISWAP_V3_POOL != address(0), "Invalid uniswap pool address");
-
+         
         marketId = _commitmentGroupConfig.marketId;
 
         withdrawlDelayTimeSeconds = DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS;
 
-        //in order for this to succeed, first, that SmartCommitmentForwarder needs to be THE trusted forwarder for the market
-
-         
+        //in order for this to succeed, first, the SmartCommitmentForwarder needs to be a trusted forwarder for the market         
         ITellerV2Context(TELLER_V2).approveMarketForwarder(
             _commitmentGroupConfig.marketId,
             SMART_COMMITMENT_FORWARDER
@@ -329,19 +324,13 @@ contract LenderCommitmentGroup_Smart is
         interestRateLowerBound = _commitmentGroupConfig.interestRateLowerBound;
         interestRateUpperBound = _commitmentGroupConfig.interestRateUpperBound;
 
-
-        
-        
         require(interestRateLowerBound <= interestRateUpperBound, "invalid _interestRateLowerBound");
 
        
         liquidityThresholdPercent = _commitmentGroupConfig.liquidityThresholdPercent;
         collateralRatio = _commitmentGroupConfig.collateralRatio;
-        //twapInterval = _commitmentGroupConfig.twapInterval;
-
+      
         require( liquidityThresholdPercent <= 10000, "invalid _liquidityThresholdPercent"); 
-
-         
 
         for (uint256 i = 0; i < _poolOracleRoutes.length; i++) {
             poolOracleRoutes.push(_poolOracleRoutes[i]);
@@ -369,31 +358,39 @@ contract LenderCommitmentGroup_Smart is
     }
 
 
-
+    /**
+     * @notice Sets the delay time for withdrawing funds. Only Protocol Owner.
+     * @param _seconds Delay time in seconds.
+     */
     function setWithdrawlDelayTime(uint256 _seconds) 
     external 
     onlyProtocolOwner {
-
         require( _seconds < MAX_WITHDRAWL_DELAY_TIME );
 
         withdrawlDelayTimeSeconds = _seconds;
     }
 
 
-
+    /**
+     * @notice Sets an optional manual ratio for principal/collateral ratio for borrowers. Only Pool Owner.
+     * @param _maxPrincipalPerCollateralAmount Price ratio, expanded to support sub-one ratios.
+     */
     function setMaxPrincipalPerCollateralAmount(uint256 _maxPrincipalPerCollateralAmount) 
     external 
     onlyOwner {
-
        maxPrincipalPerCollateralAmount = _maxPrincipalPerCollateralAmount;
     }
 
+     /**
+     * @notice Deploys the pool shares token for the lending pool.
+     * @dev This function can only be called during initialization.
+     * @return poolSharesToken_ Address of the deployed pool shares token.
+     */
     function _deployPoolSharesToken()
         internal
         onlyInitializing
         returns (address poolSharesToken_)
-    {
-      
+    {      
         require(
             address(poolSharesToken) == address(0),
             "Pool shares already deployed"
@@ -456,21 +453,20 @@ contract LenderCommitmentGroup_Smart is
             : 0;
     }
 
-    /*
-    must be initialized for this to work ! 
-    */
+    /**
+     * @notice Adds principal to the lending pool in exchange for shares.
+     * @param _amount Amount of principal tokens to deposit.
+     * @param _sharesRecipient Address receiving the shares.
+     * @param _minSharesAmountOut Minimum amount of shares expected.
+     * @return sharesAmount_ Amount of shares minted.
+     */
     function addPrincipalToCommitmentGroup(
         uint256 _amount,
         address _sharesRecipient,
         uint256 _minSharesAmountOut
     ) external whenForwarderNotPaused whenNotPaused nonReentrant onlyOracleApprovedAllowEOA 
     returns (uint256 sharesAmount_) {
-        //transfers the primary principal token from msg.sender into this contract escrow
-
        
-
-        
- 
         uint256 principalTokenBalanceBefore = principalToken.balanceOf(address(this));
 
         principalToken.safeTransferFrom(msg.sender, address(this), _amount);
@@ -478,8 +474,6 @@ contract LenderCommitmentGroup_Smart is
         uint256 principalTokenBalanceAfter = principalToken.balanceOf(address(this));
  
         require( principalTokenBalanceAfter == principalTokenBalanceBefore + _amount, "Token balance was not added properly" );
-
-
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
 
@@ -529,6 +523,18 @@ contract LenderCommitmentGroup_Smart is
         value_ = MathUpgradeable.mulDiv(amount ,  EXCHANGE_RATE_EXPANSION_FACTOR   ,  rate );
     }
 
+    /**
+ * @notice Validates loan parameters and starts the TellerV2 Loan where this contract as the lender.
+ * @dev Must be called via the Smart Commitment Forwarder 
+ * @param _borrower Address of the borrower accepting the loan.
+ * @param _bidId Identifier for the loan bid.
+ * @param _principalAmount Amount of principal being lent.
+ * @param _collateralAmount Amount of collateral provided by the borrower.
+ * @param _collateralTokenAddress Address of the collateral token contract.
+ * @param _collateralTokenId Token ID of the collateral (if applicable).
+ * @param _loanDuration Duration of the loan in seconds.
+ * @param _interestRate Interest rate for the loan, scaled by 100 (e.g., 500 = 5%).
+ */
     function acceptFundsForAcceptBid(
         address _borrower,
         uint256 _bidId,
@@ -569,7 +575,7 @@ contract LenderCommitmentGroup_Smart is
  
         principalToken.approve(address(TELLER_V2), _principalAmount);
 
-        //do not have to spoof/forward as this contract is the lender !
+        //do not have to override msg.sender as this contract is the lender !
         _acceptBidWithRepaymentListener(_bidId);
 
         totalPrincipalTokensLended += _principalAmount;
@@ -587,6 +593,11 @@ contract LenderCommitmentGroup_Smart is
          );
     }
 
+    /**
+    * @notice Internal function to accept a loan bid and set a repayment listener.
+    * @dev Interacts with the Teller Protocol to accept the bid and register the repayment listener.
+    * @param _bidId Identifier for the loan bid being accepted.
+    */
     function _acceptBidWithRepaymentListener(uint256 _bidId) internal {
         ITellerV2(TELLER_V2).lenderAcceptBid(_bidId); //this gives out the funds to the borrower
 
@@ -598,6 +609,11 @@ contract LenderCommitmentGroup_Smart is
         
     }
 
+    /**
+    * @notice Prepares shares for withdrawal, allowing the user to burn them later for principal tokens + accrued interest.
+    * @param _amountPoolSharesTokens Amount of pool shares to prepare for withdrawal.
+    * @return True if the preparation is successful.
+    */
     function prepareSharesForWithdraw(
         uint256 _amountPoolSharesTokens 
     ) external whenForwarderNotPaused whenNotPaused nonReentrant
@@ -605,6 +621,14 @@ contract LenderCommitmentGroup_Smart is
         
         return _prepareSharesForWithdraw(msg.sender, _amountPoolSharesTokens); 
     }
+
+
+    /**
+    * @notice Internal function to prepare shares for withdrawal using the required delay to mitigate sandwich attacks.
+    * @param _recipient Address of the user preparing their shares.
+    * @param _amountPoolSharesTokens Amount of pool shares to prepare for withdrawal.
+    * @return True if the preparation is successful.
+    */
 
      function _prepareSharesForWithdraw(
         address _recipient,
@@ -629,8 +653,13 @@ contract LenderCommitmentGroup_Smart is
     }
 
 
-    /*
-       
+   /**
+    * @notice Burns shares to withdraw an equivalent amount of principal tokens.
+    * @dev Requires shares to have been prepared for withdrawal in advance.
+    * @param _amountPoolSharesTokens Amount of pool shares to burn.
+    * @param _recipient Address receiving the withdrawn principal tokens.
+    * @param _minAmountOut Minimum amount of principal tokens expected to be withdrawn.
+    * @return principalTokenValueToWithdraw Amount of principal tokens withdrawn.
     */
     function burnSharesToWithdrawEarnings(
         uint256 _amountPoolSharesTokens,
@@ -672,10 +701,14 @@ contract LenderCommitmentGroup_Smart is
         return principalTokenValueToWithdraw;
     }
 
-    /*
+/**
+ * @notice Liquidates a defaulted loan using a reverse auction that starts high and falls to zero.
+ * @dev The amount of tokens withdrawn from the liquidator is always the sum of _tokenAmountDifference + amountDue .
+ * @dev Handles the liquidation process for a defaulted loan bid, ensuring all conditions for liquidation are met.
+ * @param _bidId Identifier for the defaulted loan bid.
+ * @param _tokenAmountDifference The incentive difference in tokens required for liquidation. Positive values indicate extra tokens to take, and negative values indicate extra tokens to give.
+ */
 
-
-    */
 
     function liquidateDefaultedLoanWithIncentive(
         uint256 _bidId,
@@ -685,7 +718,6 @@ contract LenderCommitmentGroup_Smart is
         //use original principal amount as amountDue
 
         uint256 amountDue = _getAmountOwedForBid(_bidId);
-
         
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
@@ -711,8 +743,6 @@ contract LenderCommitmentGroup_Smart is
             //this is used when the collateral value is higher than the principal (rare)
             //the loan will be completely made whole and our contract gets extra funds too
             uint256 tokensToTakeFromSender = abs(minAmountDifference);
-
- 
         
         
            uint256 liquidationProtocolFee = Math.mulDiv( 
@@ -759,8 +789,6 @@ contract LenderCommitmentGroup_Smart is
 
            
         }
-
- 
 
         //this will give collateral to the caller
         ITellerV2(TELLER_V2).lenderCloseLoanWithRecipient(_bidId, msg.sender);
@@ -817,9 +845,10 @@ contract LenderCommitmentGroup_Smart is
     
 
     /*
-        This function will calculate the incentive amount (using a uniswap bonus plus a timer)
+       * @dev This function will calculate the incentive amount (using a uniswap bonus plus a timer)
         of principal tokens that will be given to incentivize liquidating a loan 
- 
+
+       * @dev As time approaches infinite, the output approaches -1 * AmountDue .  
     */
     function getMinimumAmountDifferenceToCloseDefaultedLoan(
         uint256 _amountOwed,
@@ -870,9 +899,10 @@ contract LenderCommitmentGroup_Smart is
         return baseAmount.percent(collateralRatio);
     }
 
-
-    //this is expanded by 10e18
-    //this logic is very similar to that used in LCFA 
+    /* 
+    * @dev this is expanded by 10e18
+    * @dev this logic is very similar to that used in LCFA 
+    */
     function calculateCollateralTokensAmountEquivalentToPrincipalTokens(
         uint256 principalAmount 
     ) public view virtual returns (uint256 collateralTokensAmountToMatchValue) {
@@ -954,8 +984,7 @@ contract LenderCommitmentGroup_Smart is
         address repayer,
         uint256 principalAmount,
         uint256 interestAmount
-    ) external onlyTellerV2 whenForwarderNotPaused whenNotPaused {
-        //can use principal amt to increment amt paid back!! nice for math .
+    ) external onlyTellerV2 whenForwarderNotPaused whenNotPaused { 
         totalPrincipalTokensRepaid += principalAmount;
         totalInterestCollected += interestAmount;
 
@@ -974,12 +1003,17 @@ contract LenderCommitmentGroup_Smart is
         If principaltokens get stuck in the escrow vault for any reason, anyone may
         call this function to move them from that vault in to this contract 
     */
-    function withdrawFromEscrowVault ( uint256 _amount ) public whenForwarderNotPaused whenNotPaused {
-
+    function withdrawFromEscrowVault ( uint256 _amount ) external whenForwarderNotPaused whenNotPaused {
 
         address _escrowVault = ITellerV2(TELLER_V2).getEscrowVault();
 
+
         IEscrowVault(_escrowVault).withdraw(address(principalToken), _amount );
+
+
+        totalPrincipalTokensRepaid += _amount;
+
+        emit WithdrawFromEscrow(_amount);
 
     }
  
@@ -1010,17 +1044,7 @@ contract LenderCommitmentGroup_Smart is
     {
         return CommitmentCollateralType.ERC20;
     }
-
-    //this was a redundant function 
-   /* function getRequiredCollateral(uint256 _principalAmount)
-        public
-        view
-        returns (uint256 requiredCollateral_)
-    {
-        requiredCollateral_ = getCollateralRequiredForPrincipalAmount(
-            _principalAmount
-        );
-    }*/
+ 
 
     function getMarketId() external view returns (uint256) {
         return marketId;
