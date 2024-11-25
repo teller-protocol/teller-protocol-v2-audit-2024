@@ -139,10 +139,8 @@ contract LenderCommitmentGroup_Smart is
 
 
 
-    mapping(address => uint256) public poolSharesPreparedToWithdrawForLender;
-    mapping(address => uint256) public poolSharesPreparedTimestamp;
-    uint256 immutable public DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS = 300;
-    uint256 immutable public MAX_WITHDRAWL_DELAY_TIME = 86400;
+    uint256 immutable public DEFAULT_WITHDRAW_DELAY_TIME_SECONDS = 300;
+    uint256 immutable public MAX_WITHDRAW_DELAY_TIME = 86400;
 
     //mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
@@ -152,7 +150,7 @@ contract LenderCommitmentGroup_Smart is
     int256 tokenDifferenceFromLiquidations;
 
     bool public firstDepositMade;
-    uint256 public withdrawlDelayTimeSeconds; 
+    uint256 public withdrawDelayTimeSeconds; 
 
     IUniswapPricingLibrary.PoolRouteConfig[]  public  poolOracleRoutes;
 
@@ -218,12 +216,6 @@ contract LenderCommitmentGroup_Smart is
         uint256 totalInterestCollected
     );
 
-    event PoolSharesPrepared(
-        address lender,
-        uint256 sharesAmount,
-        uint256 preparedAt
-
-    );
 
     event WithdrawFromEscrow(
        
@@ -312,7 +304,7 @@ contract LenderCommitmentGroup_Smart is
          
         marketId = _commitmentGroupConfig.marketId;
 
-        withdrawlDelayTimeSeconds = DEFAULT_WITHDRAWL_DELAY_TIME_SECONDS;
+        withdrawDelayTimeSeconds = DEFAULT_WITHDRAW_DELAY_TIME_SECONDS;
 
         //in order for this to succeed, first, the SmartCommitmentForwarder needs to be a trusted forwarder for the market         
         ITellerV2Context(TELLER_V2).approveMarketForwarder(
@@ -362,12 +354,12 @@ contract LenderCommitmentGroup_Smart is
      * @notice Sets the delay time for withdrawing funds. Only Protocol Owner.
      * @param _seconds Delay time in seconds.
      */
-    function setWithdrawlDelayTime(uint256 _seconds) 
+    function setWithdrawDelayTime(uint256 _seconds) 
     external 
     onlyProtocolOwner {
-        require( _seconds < MAX_WITHDRAWL_DELAY_TIME );
+        require( _seconds < MAX_WITHDRAW_DELAY_TIME );
 
-        withdrawlDelayTimeSeconds = _seconds;
+        withdrawDelayTimeSeconds = _seconds;
     }
 
 
@@ -476,22 +468,12 @@ contract LenderCommitmentGroup_Smart is
         require( principalTokenBalanceAfter == principalTokenBalanceBefore + _amount, "Token balance was not added properly" );
 
         sharesAmount_ = _valueOfUnderlying(_amount, sharesExchangeRate());
-
-        
-
-        totalPrincipalTokensCommitted += _amount;
-        
-
-        //mint shares equal to _amount and give them to the shares recipient !!!
-        poolSharesToken.mint(_sharesRecipient, sharesAmount_);
  
-        
-
-        // prepare current balance 
-        uint256 sharesBalance = poolSharesToken.balanceOf(address(_sharesRecipient));
-        _prepareSharesForWithdraw(_sharesRecipient,sharesBalance); 
-
-
+        totalPrincipalTokensCommitted += _amount;
+         
+        //mint shares equal to _amount and give them to the shares recipient 
+        poolSharesToken.mint(_sharesRecipient, sharesAmount_);
+   
         emit LenderAddedPrincipal( 
 
             msg.sender,
@@ -609,48 +591,16 @@ contract LenderCommitmentGroup_Smart is
         
     }
 
-    /**
-    * @notice Prepares shares for withdrawal, allowing the user to burn them later for principal tokens + accrued interest.
-    * @param _amountPoolSharesTokens Amount of pool shares to prepare for withdrawal.
-    * @return True if the preparation is successful.
-    */
-    function prepareSharesForWithdraw(
+    
+     function prepareSharesForBurn(
         uint256 _amountPoolSharesTokens 
     ) external whenForwarderNotPaused whenNotPaused nonReentrant
      returns (bool) {
         
-        return _prepareSharesForWithdraw(msg.sender, _amountPoolSharesTokens); 
+        return poolSharesToken.prepareSharesForBurn(msg.sender, _amountPoolSharesTokens); 
     }
 
 
-    /**
-    * @notice Internal function to prepare shares for withdrawal using the required delay to mitigate sandwich attacks.
-    * @param _recipient Address of the user preparing their shares.
-    * @param _amountPoolSharesTokens Amount of pool shares to prepare for withdrawal.
-    * @return True if the preparation is successful.
-    */
-
-     function _prepareSharesForWithdraw(
-        address _recipient,
-        uint256 _amountPoolSharesTokens 
-    ) internal returns (bool) {
-   
-        require( poolSharesToken.balanceOf(_recipient) >= _amountPoolSharesTokens  );
-
-        poolSharesPreparedToWithdrawForLender[_recipient] = _amountPoolSharesTokens; 
-        poolSharesPreparedTimestamp[_recipient] = block.timestamp; 
-
-
-        emit PoolSharesPrepared( 
-
-            _recipient,
-            _amountPoolSharesTokens,
-           block.timestamp
-
-         );
-
-        return true; 
-    }
 
 
    /**
@@ -668,13 +618,9 @@ contract LenderCommitmentGroup_Smart is
     ) external whenForwarderNotPaused whenNotPaused  nonReentrant onlyOracleApprovedAllowEOA 
     returns (uint256) {
        
-        require(poolSharesPreparedToWithdrawForLender[msg.sender] >= _amountPoolSharesTokens,"Shares not prepared for withdraw");
-        require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - withdrawlDelayTimeSeconds,"Shares not prepared for withdraw");
-        
+        //require(poolSharesPreparedToWithdrawForLender[msg.sender] >= _amountPoolSharesTokens,"Shares not prepared for withdraw");
+       // require(poolSharesPreparedTimestamp[msg.sender] <= block.timestamp - withdrawlDelayTimeSeconds,"Shares not prepared for withdraw");
          
-        poolSharesPreparedToWithdrawForLender[msg.sender] = 0;
-        poolSharesPreparedTimestamp[msg.sender] =  block.timestamp;
-  
        
         //this should compute BEFORE shares burn 
         uint256 principalTokenValueToWithdraw = _valueOfUnderlying(
@@ -682,7 +628,7 @@ contract LenderCommitmentGroup_Smart is
             sharesExchangeRateInverse()
         );
 
-        poolSharesToken.burn(msg.sender, _amountPoolSharesTokens);
+        poolSharesToken.burn(msg.sender, _amountPoolSharesTokens, withdrawDelayTimeSeconds);
 
         totalPrincipalTokensWithdrawn += principalTokenValueToWithdraw;
 

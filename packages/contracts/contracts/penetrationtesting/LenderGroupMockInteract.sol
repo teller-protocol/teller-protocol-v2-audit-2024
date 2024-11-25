@@ -46,11 +46,11 @@ contract LenderGroupMockInteract {
      * @param _target The LenderCommitmentGroup contract address.
      * @param _amountPoolSharesTokens The amount of share tokens to prepare for withdrawal.
      */
-    function prepareSharesForWithdraw(
+    function prepareSharesForBurn(
         address _target,
         uint256 _amountPoolSharesTokens
     ) external   {
-        ILenderCommitmentGroup(_target).prepareSharesForWithdraw(
+        ILenderCommitmentGroup(_target).prepareSharesForBurn(
             _amountPoolSharesTokens
         );
     }

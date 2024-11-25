@@ -41,7 +41,7 @@ interface ILenderCommitmentGroup {
 
 
 
-     function prepareSharesForWithdraw(
+     function prepareSharesForBurn(
         uint256 _amountPoolSharesTokens 
     ) external returns (bool);
 
