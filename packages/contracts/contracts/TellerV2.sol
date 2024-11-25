@@ -877,7 +877,8 @@ contract TellerV2 is
             //USER STORY:  Should function properly with both USDT and USDC and WETH for sure 
 
             //USER STORY  :  if the lender cannot receive funds for some reason (denylisted) 
-            //then the borrower will lose all of their collateral and has no option to prevent that ..? 
+            //then we will try to send the funds to the EscrowContract bc we want the borrower to be able to get back their collateral ! 
+            // i.e.  lender not being able to recieve funds should STILL allow repayment to succeed ! 
 
           
               bool transferSuccess = safeTransferFromERC20Custom( 
