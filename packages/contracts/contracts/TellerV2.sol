@@ -539,6 +539,12 @@ contract TellerV2 is
             );
         }
 
+//local stack scope
+{
+        uint256 balanceBefore = bid.loanDetails.lendingToken.balanceOf(
+            address(bid.receiver)
+        );  
+
         //transfer funds to borrower
         if (amountToBorrower > 0) {
             bid.loanDetails.lendingToken.safeTransferFrom(
@@ -547,6 +553,16 @@ contract TellerV2 is
                 amountToBorrower
             );
         }
+
+         uint256 balanceAfter = bid.loanDetails.lendingToken.balanceOf(
+                address(bid.receiver)
+         );
+
+        //used to revert for fee-on-transfer tokens            
+         uint256 paymentAmountReceived = balanceAfter - balanceBefore;
+         require(amountToBorrower == paymentAmountReceived, "UT"); 
+}
+
 
         // Record volume filled by lenders
         lenderVolumeFilled[address(bid.loanDetails.lendingToken)][sender] += bid
@@ -877,33 +893,24 @@ contract TellerV2 is
         {} catch {
             address sender = _msgSenderForMarket(bid.marketplaceId);
 
-            uint256 balanceBefore = bid.loanDetails.lendingToken.balanceOf(
-                address(this)
-            ); 
-
+            
             //if unable, pay to escrow
+            //fee-on-transfer tokens should not make it past the acceptBid step
             bid.loanDetails.lendingToken.safeTransferFrom(
                 sender,
                 address(this),
                 _paymentAmount
             );
 
-            uint256 balanceAfter = bid.loanDetails.lendingToken.balanceOf(
-                address(this)
-            );
-
-            //used for fee-on-send tokens
-            uint256 paymentAmountReceived = balanceAfter - balanceBefore;
-
             bid.loanDetails.lendingToken.approve(
                 address(escrowVault),
-                paymentAmountReceived
+                _paymentAmount
             );
 
             IEscrowVault(escrowVault).deposit(
                 lender,
                 address(bid.loanDetails.lendingToken),
-                paymentAmountReceived
+                _paymentAmount
             );
         }
 

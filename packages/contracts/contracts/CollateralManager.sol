@@ -395,6 +395,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
             escrowAddress
         );
         // Pull collateral from borrower & deposit into escrow
+        // This will revert with fee-on-transfer tokens 
         if (collateralInfo._collateralType == CollateralType.ERC20) {
             IERC20Upgradeable(collateralInfo._collateralAddress).transferFrom(
                 borrower,
