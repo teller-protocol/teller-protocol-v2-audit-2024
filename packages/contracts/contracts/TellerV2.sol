@@ -874,7 +874,7 @@ contract TellerV2 is
 
         uint256 _paymentAmount = _payment.principal + _payment.interest;
 
-            //USER STORY:  Should function properly with both USDT and USDC and WETH for sure 
+            //USER STORY:  Should function properly with USDT and USDC and WETH for sure 
 
             //USER STORY  :  if the lender cannot receive funds for some reason (denylisted) 
             //then we will try to send the funds to the EscrowContract bc we want the borrower to be able to get back their collateral ! 
@@ -943,7 +943,9 @@ contract TellerV2 is
         }
     }
 
-    
+    /*
+      A try/catch pattern for safeTransferERC20 that helps support standard ERC20 tokens and non-standard ones like USDT 
+    */
     function safeTransferFromERC20Custom(
 
         address _token,
@@ -954,8 +956,8 @@ contract TellerV2 is
     ) internal virtual returns (bool success) {
 
         //https://github.com/nomad-xyz/ExcessivelySafeCall
-        //this works similarly to a try catch -- an inner revert doesnt revert us
-         ( bool callSuccess, bytes memory callData ) = ExcessivelySafeCall.excessivelySafeCall(
+        //this works similarly to a try catch -- an inner revert doesnt revert us but will make callSuccess be false. 
+         ( bool callSuccess, bytes memory callReturnData ) = ExcessivelySafeCall.excessivelySafeCall(
                 address(_token),
                 100000,
                 0,
@@ -975,18 +977,18 @@ contract TellerV2 is
            );
     
 
-             //IF the token returns data, make sure it returns true. This helps us with USDT which may revert but never returns a bool.
-            bool dataIsSuccess;
-            if (callData.length >= 32) {
+             //If the token returns data, make sure it returns true. This helps us with USDT which may revert but never returns a bool.
+            bool dataIsSuccess = true;
+            if (callReturnData.length >= 32) {
                 assembly {
                     // Load the first 32 bytes of the return data (assuming it's a bool)
-                    let result := mload(add(callData, 0x20))
+                    let result := mload(add(callReturnData, 0x20))
                     // Check if the result equals `true` (1)
                     dataIsSuccess := eq(result, 1)
                 }
             }
 
-           // ensures that both callSuccess (the low-level call didn't fail) and dataIsSuccess (the function returned true) must hold for the transfer to be considered successful.
+           // ensures that both callSuccess (the low-level call didn't fail) and dataIsSuccess (the function returned true if it returned something).
             return callSuccess && dataIsSuccess; 
 
 
