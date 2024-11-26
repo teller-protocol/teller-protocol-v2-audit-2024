@@ -30,6 +30,7 @@ import { UniswapV3PoolMock } from "../../contracts/mock/uniswap/UniswapV3PoolMoc
 
 import { UniswapV3FactoryMock } from "../../contracts/mock/uniswap/UniswapV3FactoryMock.sol";
 import { TellerV2SolMock } from "../../contracts/mock/TellerV2SolMock.sol";
+import { ProtocolPausingManager } from "../../contracts/pausing/ProtocolPausingManager.sol";
 
 
 import "../../contracts/libraries/uniswap/FullMath.sol";
@@ -44,6 +45,8 @@ import "forge-std/console.sol";
 contract SmartCommitmentForwarder_Test is Testable {
     TellerV2SolMock private tellerV2Mock;
     MarketRegistryMock mockMarketRegistry;
+
+    ProtocolPausingManager protocolPausingManager; 
 
     User private marketOwner;
     User private lender;
@@ -101,6 +104,10 @@ contract SmartCommitmentForwarder_Test is Testable {
         );
 
         smartCommitmentForwarder.initialize();
+
+
+        protocolPausingManager = new ProtocolPausingManager();
+        protocolPausingManager.initialize(); //this becomes the owner 
 
         marketOwner = new User( address(tellerV2Mock)  );
         borrower = new User( address(tellerV2Mock)  );
@@ -181,6 +188,47 @@ contract SmartCommitmentForwarder_Test is Testable {
 
 
     }
+
+
+     function test_pause() public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+
+         smartCommitmentForwarder.pause();
+
+     }
+
+     function test_unpause() public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+
+         smartCommitmentForwarder.pause();
+
+         smartCommitmentForwarder.unpause();
+
+
+     }
+
+     function test_setOracle() public {
+
+          tellerV2Mock.setMockOwner(address(this));
+
+          smartCommitmentForwarder.setOracle(address(this));
+
+     }
+
+     function test_setIsStrictMode() public {
+
+        tellerV2Mock.setMockOwner(address(this));
+
+        smartCommitmentForwarder.setIsStrictMode(true);
+
+     }
+
     /*
 
     function acceptSmartCommitmentWithRecipient_test(){
