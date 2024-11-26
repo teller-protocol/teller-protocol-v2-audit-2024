@@ -163,6 +163,13 @@ contract SmartCommitmentForwarder_Test is Testable {
     }
 
 
+     function test_cant_reinit() public {
+
+
+        vm.expectRevert("Initializable: contract is already initialized");
+        smartCommitmentForwarder.initialize();
+     }
+
     function test_acceptSmartCommitment() public {
 
         uint256 principalAmount = 1e6;
@@ -189,6 +196,68 @@ contract SmartCommitmentForwarder_Test is Testable {
 
     }
 
+      function test_acceptSmartCommitment_fails_when_paused() public {
+
+
+        tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+
+         smartCommitmentForwarder.pause();
+
+
+
+        uint256 principalAmount = 1e6;
+        uint256 collateralAmount = 1e6; 
+        uint16 interestRate = 500;
+        uint32 loanDuration = 1e6;
+
+        address recipient = address(this);
+
+
+        vm.expectRevert("Pausable: paused");
+        uint256 bidId = smartCommitmentForwarder.acceptSmartCommitmentWithRecipient(
+            address(lenderPool),
+            principalAmount,
+            collateralAmount,
+            0,
+            address(collateralToken),
+            address(recipient),
+            interestRate,
+            loanDuration
+        );
+
+
+
+    }
+
+
+
+
+     function test_setLiquidationProtocolFeePercent() public {
+
+          tellerV2Mock.setMockOwner(address(this));
+           
+         smartCommitmentForwarder.setLiquidationProtocolFeePercent(555);
+
+         uint256 fee = smartCommitmentForwarder.getLiquidationProtocolFeePercent();
+
+         assertEq(fee , 555);
+
+     }
+
+
+     function test_setLiquidationProtocolFeePercent_not_authorized() public {
+
+      
+         
+           vm.expectRevert("Sender not authorized");
+         smartCommitmentForwarder.setLiquidationProtocolFeePercent(555);
+
+          
+     }
+
+
 
      function test_pause() public {
 
@@ -196,6 +265,31 @@ contract SmartCommitmentForwarder_Test is Testable {
 
          protocolPausingManager.addPauser(address(this));
 
+         smartCommitmentForwarder.pause();
+
+     }
+
+     function test_cannot_pause () public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         //protocolPausingManager.addPauser(address(this));
+          protocolPausingManager.renounceOwnership();
+
+         vm.expectRevert("Sender not authorized");
+         smartCommitmentForwarder.pause();  
+ 
+     }
+
+      function test_pause_cannot_double_pause() public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+
+         smartCommitmentForwarder.pause();  
+
+         vm.expectRevert("Pausable: paused");
          smartCommitmentForwarder.pause();
 
      }
@@ -213,6 +307,56 @@ contract SmartCommitmentForwarder_Test is Testable {
 
      }
 
+     function test_unpause_sets_getLastUnpausedAt() public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+
+         vm.warp(15000);
+         smartCommitmentForwarder.pause();
+
+         smartCommitmentForwarder.unpause();
+
+         vm.warp(25000);
+         
+         uint256 lastUnpausedAt = smartCommitmentForwarder.getLastUnpausedAt();
+ 
+         assertEq( lastUnpausedAt , 15000 );
+     }
+
+
+     function test_cannot_unpause() public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+ 
+         smartCommitmentForwarder.pause();
+
+         protocolPausingManager.removePauser(address(this));
+
+        protocolPausingManager.renounceOwnership();
+
+          vm.expectRevert("Sender not authorized");
+         smartCommitmentForwarder.unpause();
+
+
+     }
+
+
+      function test_unpause_cant_unpause() public {
+
+         tellerV2Mock.setProtocolPausingManager(address(protocolPausingManager) );
+
+         protocolPausingManager.addPauser(address(this));
+    
+         vm.expectRevert("Pausable: not paused");
+         smartCommitmentForwarder.unpause();
+
+
+     }
+
      function test_setOracle() public {
 
           tellerV2Mock.setMockOwner(address(this));
@@ -221,10 +365,25 @@ contract SmartCommitmentForwarder_Test is Testable {
 
      }
 
+     function test_setOracle_unauthorized() public {
+
+            vm.expectRevert("Sender not authorized");
+          smartCommitmentForwarder.setOracle(address(this));
+
+     }
+
+
      function test_setIsStrictMode() public {
 
         tellerV2Mock.setMockOwner(address(this));
 
+        smartCommitmentForwarder.setIsStrictMode(true);
+
+     }
+
+     function test_setIsStrictMode_unauthorized() public {
+
+        vm.expectRevert("Sender not authorized");
         smartCommitmentForwarder.setIsStrictMode(true);
 
      }
