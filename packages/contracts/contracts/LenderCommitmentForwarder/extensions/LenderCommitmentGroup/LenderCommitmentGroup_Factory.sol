@@ -60,7 +60,7 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
         uint256 _initialPrincipalAmount,
         ILenderCommitmentGroup.CommitmentGroupConfig calldata _commitmentGroupConfig,
         IUniswapPricingLibrary.PoolRouteConfig[] calldata _poolOracleRoutes
-    ) external returns (address newGroupContract_) {
+    ) external returns ( address ) {
          
 
       
@@ -93,6 +93,8 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
           //transfer ownership to msg.sender 
         OwnableUpgradeable(address(newGroupContract_))
             .transferOwnership(msg.sender);
+
+        return address(newGroupContract_) ;
     }
 
 
@@ -106,7 +108,7 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
         address _newGroupContract,
         uint256 _initialPrincipalAmount,
         address _principalTokenAddress
-    ) internal {
+    ) internal returns (uint256) {
 
 
             IERC20(_principalTokenAddress).transferFrom(
@@ -128,7 +130,7 @@ contract LenderCommitmentGroupFactory is OwnableUpgradeable {
                     0 //_minShares
                 );
 
-
+        return sharesAmount_;
     }
 
 }

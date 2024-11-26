@@ -106,7 +106,7 @@ contract LenderCommitmentGroupFactory_Test is Testable {
         );
 
         smartCommitmentForwarder.initialize();
- 
+    
     
         LenderCommitmentGroup_Smart lenderGroupPoolImplementation = new LenderCommitmentGroup_Smart(
             address(tellerV2Mock),
@@ -152,14 +152,16 @@ contract LenderCommitmentGroupFactory_Test is Testable {
         principalToken = new TestERC20Token(
             "Test Wrapped ETH",
             "TWETH",
-            0,
+            1e32,
             principalTokenDecimals
         );
+
+         
 
         collateralToken = new TestERC20Token(
             "Test USDC",
             "TUSDC",
-            0,
+            1e32,
             collateralTokenDecimals
         );
 
@@ -167,7 +169,7 @@ contract LenderCommitmentGroupFactory_Test is Testable {
 
  
 
-     function deployPool_test() public {
+     function test_deployPool() public {
 
         address _principalTokenAddress = address(principalToken);
         address _collateralTokenAddress = address(collateralToken);
@@ -177,6 +179,62 @@ contract LenderCommitmentGroupFactory_Test is Testable {
 
 
         uint256 initialPrincipalAmount = 10000000;
+
+
+        principalToken.approve( address(factory), initialPrincipalAmount ) ;
+
+         ILenderCommitmentGroup.CommitmentGroupConfig memory groupConfig = ILenderCommitmentGroup.CommitmentGroupConfig({
+            principalTokenAddress: _principalTokenAddress,
+            collateralTokenAddress: _collateralTokenAddress,
+            marketId: marketId,
+            maxLoanDuration: maxDuration,
+            interestRateLowerBound: minInterestRate,
+            interestRateUpperBound: minInterestRate,
+            liquidityThresholdPercent: 7500,
+            collateralRatio: 10000   //1-1  
+        });
+
+
+
+           IUniswapPricingLibrary.PoolRouteConfig
+            memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+                pool: address(mockUniswapPool),
+                zeroForOne: zeroForOne,
+                twapInterval: twapInterval,
+                token0Decimals: 18,
+                token1Decimals: 18
+            });
+
+
+          IUniswapPricingLibrary.PoolRouteConfig[]
+            memory routesConfig = new IUniswapPricingLibrary.PoolRouteConfig[](
+                1
+            ); 
+      
+       routesConfig[0] = routeConfig;
+
+
+ 
+       address newGroupContract = factory.deployLenderCommitmentGroupPool(
+            initialPrincipalAmount,
+            groupConfig,
+            routesConfig
+        );
+
+         assertEq( newGroupContract == address(0x0),  false   );
+
+    }
+
+     function test_deployPool_no_initial_principal() public {
+
+        address _principalTokenAddress = address(principalToken);
+        address _collateralTokenAddress = address(collateralToken);
+
+        bool zeroForOne = false; 
+        uint32 twapInterval = 0;
+
+
+        uint256 initialPrincipalAmount = 0;
 
          ILenderCommitmentGroup.CommitmentGroupConfig memory groupConfig = ILenderCommitmentGroup.CommitmentGroupConfig({
             principalTokenAddress: _principalTokenAddress,
@@ -206,32 +264,21 @@ contract LenderCommitmentGroupFactory_Test is Testable {
                 1
             ); 
 
+            routesConfig[0] = routeConfig;
+
 
  
-        factory.deployLenderCommitmentGroupPool(
+       address newGroupContract = factory.deployLenderCommitmentGroupPool(
             initialPrincipalAmount,
             groupConfig,
             routesConfig
         );
 
-    }
-
-    /*
-    function deployPool_test_no_principal() public {
-
-
-
- 
-        factory.deployLenderCommitmentGroupPool(
-            initialPrincipalAmount,
-            commitmentGroupConfig,
-            poolOracleRoutes
-        );
+         assertEq( newGroupContract == address(0x0),  false   );
 
     }
-    */
- 
 
+   
   
   
 
