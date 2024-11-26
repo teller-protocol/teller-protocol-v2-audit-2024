@@ -854,6 +854,48 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         );
     }
 
+
+     function test_repayLoanCallback() public {
+        uint256 principalAmount = 100;
+        uint256 interestAmount = 50;
+        address repayer = address(borrower);
+
+        uint256 bidId = 0;
+
+        lenderCommitmentGroupSmart.mock_setBidActive(bidId);
+        
+        vm.prank(address(_tellerV2));
+        lenderCommitmentGroupSmart.repayLoanCallback(
+            bidId,
+            address(repayer),
+            principalAmount,
+            interestAmount
+        );
+
+        
+
+     }
+
+      function test_repayLoanCallback_bid_not_active() public {
+        uint256 principalAmount = 100;
+        uint256 interestAmount = 50;
+        address repayer = address(borrower);
+
+        uint256 bidId = 0;
+
+        vm.expectRevert("Bid is not active for group");
+        vm.prank(address(_tellerV2));
+        lenderCommitmentGroupSmart.repayLoanCallback(
+            bidId,
+            address(repayer),
+            principalAmount,
+            interestAmount
+        );
+
+       
+
+     }
+
     /*
       improve tests for this 
 
