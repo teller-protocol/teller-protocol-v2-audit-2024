@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "../../contracts/TellerV2Context.sol";
 import {SmartCommitmentForwarder} from  "../../contracts/LenderCommitmentForwarder/SmartCommitmentForwarder.sol";
 
+import {LenderCommitmentGroup_SmartMock} from  "../../contracts/mock/LenderCommitmentGroup_SmartMock.sol";
+
 import "../tokens/TestERC20Token.sol"; 
 //import "../../contracts/TellerV2Context.sol";
 
@@ -27,6 +29,8 @@ import "../../contracts/mock/MarketRegistryMock.sol";
 import { UniswapV3PoolMock } from "../../contracts/mock/uniswap/UniswapV3PoolMock.sol";
 
 import { UniswapV3FactoryMock } from "../../contracts/mock/uniswap/UniswapV3FactoryMock.sol";
+import { TellerV2SolMock } from "../../contracts/mock/TellerV2SolMock.sol";
+
 
 import "../../contracts/libraries/uniswap/FullMath.sol";
 
@@ -38,7 +42,7 @@ import "forge-std/console.sol";
 
 
 contract SmartCommitmentForwarder_Test is Testable {
-    LenderCommitmentForwarderTest_TellerV2Mock private tellerV2Mock;
+    TellerV2SolMock private tellerV2Mock;
     MarketRegistryMock mockMarketRegistry;
 
     User private marketOwner;
@@ -75,12 +79,14 @@ contract SmartCommitmentForwarder_Test is Testable {
     UniswapV3PoolMock mockUniswapPool;
     UniswapV3PoolMock mockUniswapPoolSecondary;
 
+    LenderCommitmentGroup_SmartMock lenderPool;
+
     //  address principalTokenAddress;
 
     constructor() {}
 
     function setUp() public {
-        tellerV2Mock = new LenderCommitmentForwarderTest_TellerV2Mock();
+        tellerV2Mock = new TellerV2SolMock();
         mockMarketRegistry = new MarketRegistryMock();
 
         mockUniswapFactory = new UniswapV3FactoryMock();
@@ -100,7 +106,7 @@ contract SmartCommitmentForwarder_Test is Testable {
         borrower = new User( address(tellerV2Mock)  );
         lender = new User( address(tellerV2Mock)  );
 
-        tellerV2Mock.__setMarketRegistry(address(mockMarketRegistry));
+        tellerV2Mock.setMarketRegistry(address(mockMarketRegistry));
         mockMarketRegistry.setMarketOwner(address(marketOwner));
 
         //tokenAddress = address(0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174);
@@ -111,14 +117,16 @@ contract SmartCommitmentForwarder_Test is Testable {
         minInterestRate = 3000;
         expiration = uint32(block.timestamp) + uint32(64000);
 
+// only need these if using the real tellerv2 
+     /*
         marketOwner.setTrustedMarketForwarder(
             marketId,
             address(smartCommitmentForwarder)
         );
-        lender.approveMarketForwarder(
+       lender.approveMarketForwarder(
             marketId,
             address(smartCommitmentForwarder)
-        );
+        );*/
 
         borrowersArray = new address[](1);
         borrowersArray[0] = address(borrower);
@@ -126,28 +134,54 @@ contract SmartCommitmentForwarder_Test is Testable {
         principalToken = new TestERC20Token(
             "Test Wrapped ETH",
             "TWETH",
-            0,
+            1e32,
             principalTokenDecimals
         );
 
         collateralToken = new TestERC20Token(
             "Test USDC",
             "TUSDC",
-            0,
+            1e32,
             collateralTokenDecimals
+        );
+
+
+        lenderPool = new LenderCommitmentGroup_SmartMock(
+            address(tellerV2Mock),
+            address(smartCommitmentForwarder),
+            address(mockUniswapFactory)
         );
 
         
     }
 
 
-   /* function setLiquidationProtocolFeePercent_test(){
+    function test_acceptSmartCommitment() public {
+
+        uint256 principalAmount = 1e6;
+        uint256 collateralAmount = 1e6; 
+        uint16 interestRate = 500;
+        uint32 loanDuration = 1e6;
+
+        address recipient = address(this);
 
 
+
+        uint256 bidId = smartCommitmentForwarder.acceptSmartCommitmentWithRecipient(
+            address(lenderPool),
+            principalAmount,
+            collateralAmount,
+            0,
+            address(collateralToken),
+            address(recipient),
+            interestRate,
+            loanDuration
+        );
 
 
 
     }
+    /*
 
     function acceptSmartCommitmentWithRecipient_test(){
 
@@ -195,6 +229,7 @@ contract SmartCommitmentForwarder_Test is Testable {
 }
  
 //Move to a helper file !
+/*
 contract LenderCommitmentForwarderTest_TellerV2Mock is TellerV2Context {
     constructor() TellerV2Context(address(0)) {}
 
@@ -218,3 +253,4 @@ contract LenderCommitmentForwarderTest_TellerV2Mock is TellerV2Context {
         return _msgDataForMarket(_marketId);
     }
 }
+*/
