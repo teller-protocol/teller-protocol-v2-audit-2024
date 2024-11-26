@@ -948,16 +948,14 @@ contract LenderCommitmentGroup_Smart is
     /*
         If principaltokens get stuck in the escrow vault for any reason, anyone may
         call this function to move them from that vault in to this contract 
+
+        @dev there is no need to increment totalPrincipalTokensRepaid here as that is accomplished by the repayLoanCallback
     */
     function withdrawFromEscrowVault ( uint256 _amount ) external whenForwarderNotPaused whenNotPaused {
 
         address _escrowVault = ITellerV2(TELLER_V2).getEscrowVault();
 
-
-        IEscrowVault(_escrowVault).withdraw(address(principalToken), _amount );
-
-
-        totalPrincipalTokensRepaid += _amount;
+        IEscrowVault(_escrowVault).withdraw(address(principalToken), _amount );  
 
         emit WithdrawFromEscrow(_amount);
 
