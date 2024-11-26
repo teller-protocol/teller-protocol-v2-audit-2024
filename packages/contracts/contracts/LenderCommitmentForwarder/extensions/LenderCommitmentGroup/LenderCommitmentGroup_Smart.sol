@@ -924,13 +924,15 @@ contract LenderCommitmentGroup_Smart is
     This  callback occurs when a TellerV2 repayment happens or when a TellerV2 liquidate happens 
 
     lenderCloseLoan does not trigger a repayLoanCallback 
-    */
+
+    It is important that only teller loans FOR THIS POOL can call this !
+     */
     function repayLoanCallback(
         uint256 _bidId,
         address repayer,
         uint256 principalAmount,
         uint256 interestAmount
-    ) external onlyTellerV2 whenForwarderNotPaused whenNotPaused { 
+    ) external onlyTellerV2 whenForwarderNotPaused whenNotPaused bidIsActiveForGroup(_bidId) { 
         totalPrincipalTokensRepaid += principalAmount;
         totalInterestCollected += interestAmount;
 
