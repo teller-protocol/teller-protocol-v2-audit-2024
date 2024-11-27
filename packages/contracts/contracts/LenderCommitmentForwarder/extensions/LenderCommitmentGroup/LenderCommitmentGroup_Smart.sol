@@ -107,31 +107,29 @@ contract LenderCommitmentGroup_Smart is
     address public immutable TELLER_V2;
     address public immutable SMART_COMMITMENT_FORWARDER;
     address public immutable UNISWAP_V3_FACTORY;
-    address private UNISWAP_V3_POOL; //deprecated
+    //address private __UNISWAP_V3_POOL; //deprecated
  
     LenderCommitmentGroupShares public poolSharesToken;
 
     IERC20 public principalToken;
     IERC20 public collateralToken;
-    uint24 private _uniswapPoolFee; //deprecated
+    //uint24 private __uniswapPoolFee; //deprecated
 
     uint256 marketId;
 
- 
+
     uint256 public totalPrincipalTokensCommitted; 
     uint256 public totalPrincipalTokensWithdrawn;
 
     uint256 public totalPrincipalTokensLended;
     uint256 public totalPrincipalTokensRepaid; //subtract this and the above to find total principal tokens outstanding for loans
 
-    
- 
     uint256 public totalInterestCollected;
 
-    uint16 public liquidityThresholdPercent; //5000 is 50 pct  // enforce max of 10000
-    uint16 public collateralRatio; //the overcollateralization ratio, typically 80 pct
+    uint16 public liquidityThresholdPercent; //max ratio of principal allowed to be borrowed vs escrowed  //  maximum of 10000 (100%)
+    uint16 public collateralRatio; //the overcollateralization ratio, typically >100 pct
 
-    uint32 private _twapInterval; //deprecated
+    //uint32 private __twapInterval; //deprecated
     uint32 public maxLoanDuration;
     uint16 public interestRateLowerBound;
     uint16 public interestRateUpperBound;
