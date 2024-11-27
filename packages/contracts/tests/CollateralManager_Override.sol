@@ -19,6 +19,9 @@ import "../contracts/mock/TellerV2SolMock.sol";
 import "../contracts/CollateralManager.sol";
 
 contract CollateralManager_Override is CollateralManager {
+
+     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
+     
     bool public checkBalancesWasCalled;
     bool public checkBalanceWasCalled;
     address public withdrawInternalWasCalledToRecipient;
@@ -118,16 +121,7 @@ contract CollateralManager_Override is CollateralManager {
         return bidsCollateralBackedGlobally;
     }
 
-    function _checkBalances(
-        address _borrowerAddress,
-        Collateral[] memory _collateralInfo,
-        bool _shortCircut
-    ) internal override view returns (bool validated_, bool[] memory checks_) {
-        //checkBalancesWasCalled = true;
-
-        validated_ = checkBalanceGlobalValid;
-        checks_ = new bool[](0);
-    }
+ 
 
     function _deposit(uint256 _bidId, Collateral memory collateralInfo)
         internal
@@ -136,6 +130,37 @@ contract CollateralManager_Override is CollateralManager {
         depositInternalWasCalled = true;
     }
 
+    function forceSetBidCollateral(
+
+        uint256 _bidId,
+        Collateral[] memory newCollateralArray
+    ) public {
+         CollateralInfo storage collateral = _bidCollaterals[_bidId];
+
+        for (uint256 i; i < newCollateralArray.length; i++) {
+            address collateralAddress = newCollateralArray[i]._collateralAddress;
+
+            collateral.collateralAddresses.add(collateralAddress );
+
+            collateral.collateralInfo[collateralAddress] =  newCollateralArray[i];
+        }
+
+    }
+
+
+/*
+    function _checkBalances(
+        address _borrowerAddress,
+        Collateral[] memory _collateralInfo,
+        bool _shortCircuit
+    ) internal override view returns (bool validated_, bool[] memory checks_) {
+        //checkBalancesWasCalled = true;
+
+        validated_ = checkBalanceGlobalValid;
+        checks_ = new bool[](0);
+    }
+
+
     function _checkBalance(
         address _borrowerAddress,
         Collateral memory _collateralInfo
@@ -143,7 +168,7 @@ contract CollateralManager_Override is CollateralManager {
         //checkBalanceWasCalled = true;
 
         return checkBalanceGlobalValid;
-    }
+    }*/
 
     //for mock purposes
     function setGlobalEscrowProxyAddress(address _address) public {
