@@ -530,12 +530,12 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
      * @notice Checks the validity of a borrower's multiple collateral balances.
      * @param _borrowerAddress The address of the borrower holding the collateral.
      * @param _collateralInfo Additional information about the collateral assets.
-     * @param _shortCircut  if true, will return immediately until an invalid balance
+     * @param _shortCircuit  if true, will return immediately until an invalid balance
      */
     function _checkBalances(
         address _borrowerAddress,
         Collateral[] memory _collateralInfo,
-        bool _shortCircut
+        bool _shortCircuit
     ) internal virtual view returns (bool validated_, bool[] memory checks_) {
         checks_ = new bool[](_collateralInfo.length);
         validated_ = true;
@@ -548,7 +548,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
             if (!isValidated) {
                 validated_ = false;
                 //if short circuit is true, return on the first invalid balance to save execution cycles. Values of checks[] will be invalid/undetermined if shortcircuit is true.
-                if (_shortCircut) {
+                if (_shortCircuit) {
                     return (validated_, checks_);
                 }
             }
