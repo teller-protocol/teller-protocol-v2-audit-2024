@@ -9,17 +9,15 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IOracleProtectionManager} from "../interfaces/oracleprotection/IOracleProtectionManager.sol";
  
-//can go on the SCF 
+
 abstract contract OracleProtectionManager is 
 IOracleProtectionManager, OwnableUpgradeable
 {
     bytes32 private constant HYPERNATIVE_ORACLE_STORAGE_SLOT = bytes32(uint256(keccak256("eip1967.hypernative.oracle")) - 1);
     bytes32 private constant HYPERNATIVE_MODE_STORAGE_SLOT = bytes32(uint256(keccak256("eip1967.hypernative.is_strict_mode")) - 1);
     
-   // event OracleAdminChanged(address indexed previousAdmin, address indexed newAdmin);
     event OracleAddressChanged(address indexed previousOracle, address indexed newOracle);
-
-
+    
 
     modifier onlyOracleApproved() {
          
@@ -32,8 +30,6 @@ IOracleProtectionManager, OwnableUpgradeable
         require( isOracleApprovedAllowEOA(msg.sender ) , "Oracle: Not Approved");
         _;
     }
-
-
  
 
     function oracleRegister(address _account) public virtual {
@@ -45,9 +41,7 @@ IOracleProtectionManager, OwnableUpgradeable
         else {
             oracle.register(_account);
         }
-    }
-
-
+    } 
 
 
      function isOracleApproved(address _sender) public returns (bool) {
@@ -62,7 +56,7 @@ IOracleProtectionManager, OwnableUpgradeable
         return true;
      }
 
-    // only allow EOA to interact 
+    // Only allow EOA to interact 
     function isOracleApprovedOnlyAllowEOA(address _sender) public returns (bool){
         address oracleAddress = _hypernativeOracle();
         if (oracleAddress == address(0)) {
@@ -77,6 +71,7 @@ IOracleProtectionManager, OwnableUpgradeable
         return true ;
     }
 
+    // Always allow EOAs to interact, non-EOA have to register
     function isOracleApprovedAllowEOA(address _sender) public returns (bool){
         address oracleAddress = _hypernativeOracle();
 
@@ -100,7 +95,10 @@ IOracleProtectionManager, OwnableUpgradeable
     }
     
     
+    /*
+    * @dev This must be implemented by the parent contract or else the modifiers will always pass through all traffic
 
+    */
     function _setOracle(address _oracle) internal {
         address oldOracle = _hypernativeOracle();
         _setAddressBySlot(HYPERNATIVE_ORACLE_STORAGE_SLOT, _oracle);
@@ -126,11 +124,7 @@ IOracleProtectionManager, OwnableUpgradeable
         }
     }
 
-
-   /* function hypernativeOracleAdmin() public view returns (address) {
-        return _getAddressBySlot(HYPERNATIVE_ADMIN_STORAGE_SLOT);
-    }*/
-
+ 
     function hypernativeOracleIsStrictMode() public view returns (bool) {
         return _getValueBySlot(HYPERNATIVE_MODE_STORAGE_SLOT) == 1;
     }
@@ -147,7 +141,7 @@ IOracleProtectionManager, OwnableUpgradeable
         }
     }
 
-    function _hypernativeOracle() private view returns (address) {
+    function _hypernativeOracle() internal view returns (address) {
         return _getAddressBySlot(HYPERNATIVE_ORACLE_STORAGE_SLOT);
     }
 

@@ -65,34 +65,7 @@ abstract contract TellerV2MarketForwarder_G2 is
             );
     }
 
-    /**
-     * @notice Creates a new loan using the TellerV2 lending protocol.
-     * @param _createLoanArgs Details describing the loan agreement.]
-     * @param _borrower The borrower address for the new loan.
-     */
-    /*function _submitBid(
-        CreateLoanArgs memory _createLoanArgs,
-        address _borrower
-    ) internal virtual returns (uint256 bidId) {
-        bytes memory responseData;
-
-        responseData = _forwardCall(
-            abi.encodeWithSignature(
-                "submitBid(address,uint256,uint256,uint32,uint16,string,address)",
-                _createLoanArgs.lendingToken,
-                _createLoanArgs.marketId,
-                _createLoanArgs.principal,
-                _createLoanArgs.duration,
-                _createLoanArgs.interestRate,
-                _createLoanArgs.metadataURI,
-                _createLoanArgs.recipient
-            ),
-            _borrower
-        );
-
-        return abi.decode(responseData, (uint256));
-    }*/
-
+     
     /**
      * @notice Creates a new loan using the TellerV2 lending protocol.
      * @param _createLoanArgs Details describing the loan agreement.]

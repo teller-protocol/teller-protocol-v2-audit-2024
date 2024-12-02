@@ -31,6 +31,8 @@ ILoanRepaymentCallbacks
     address public mockOwner;
     address public mockProtocolFeeRecipient;
 
+    mapping(address => bool) public mockPausers;
+
 
     PaymentCycleType globalBidPaymentCycleType = PaymentCycleType.Seconds;
     uint32 globalBidPaymentCycleDuration = 3000;
@@ -71,10 +73,9 @@ ILoanRepaymentCallbacks
     function owner() external view returns(address){
         return mockOwner;
     }
+ 
 
-    function isPauser(address _account) public view returns(bool){
-        return false; //for now 
-    }
+   
 
     function approveMarketForwarder(uint256 _marketId, address _forwarder)
         external

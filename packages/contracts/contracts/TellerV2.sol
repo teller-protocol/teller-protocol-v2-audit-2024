@@ -22,9 +22,10 @@ import "./interfaces/ILoanRepaymentListener.sol";
 
 // Libraries
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "./openzeppelin/SafeERC20.sol";
 
 import "./libraries/NumbersLib.sol";
+import "./libraries/ExcessivelySafeCall.sol";
 
 import { V2Calculations, PaymentCycleType } from "./libraries/V2Calculations.sol";
 
@@ -539,6 +540,12 @@ contract TellerV2 is
             );
         }
 
+//local stack scope
+{
+        uint256 balanceBefore = bid.loanDetails.lendingToken.balanceOf(
+            address(bid.receiver)
+        );  
+
         //transfer funds to borrower
         if (amountToBorrower > 0) {
             bid.loanDetails.lendingToken.safeTransferFrom(
@@ -547,6 +554,16 @@ contract TellerV2 is
                 amountToBorrower
             );
         }
+
+         uint256 balanceAfter = bid.loanDetails.lendingToken.balanceOf(
+                address(bid.receiver)
+         );
+
+        //used to revert for fee-on-transfer tokens as principal            
+         uint256 paymentAmountReceived = balanceAfter - balanceBefore;
+         require(amountToBorrower == paymentAmountReceived, "UT"); 
+}
+
 
         // Record volume filled by lenders
         lenderVolumeFilled[address(bid.loanDetails.lendingToken)][sender] += bid
@@ -859,53 +876,62 @@ contract TellerV2 is
     }
 
 
+    /*
+    If for some reason the lender cannot receive funds, should put those funds into the escrow 
+    so the loan can always be repaid and the borrower can get collateral out 
+ 
+
+    */
     function _sendOrEscrowFunds(uint256 _bidId, Payment memory _payment)
-        internal
+        internal virtual 
     {
         Bid storage bid = bids[_bidId];
         address lender = getLoanLender(_bidId);
 
         uint256 _paymentAmount = _payment.principal + _payment.interest;
 
-        try 
+            //USER STORY:  Should function properly with USDT and USDC and WETH for sure 
 
-            bid.loanDetails.lendingToken.transferFrom{ gas: 100000 }(
-                _msgSenderForMarket(bid.marketplaceId),
-                lender,
-                _paymentAmount
-            )
-        {} catch {
-            address sender = _msgSenderForMarket(bid.marketplaceId);
+            //USER STORY  :  if the lender cannot receive funds for some reason (denylisted) 
+            //then we will try to send the funds to the EscrowContract bc we want the borrower to be able to get back their collateral ! 
+            // i.e.  lender not being able to recieve funds should STILL allow repayment to succeed ! 
 
-            uint256 balanceBefore = bid.loanDetails.lendingToken.balanceOf(
-                address(this)
-            ); 
+          
+              bool transferSuccess = safeTransferFromERC20Custom( 
+                    address(bid.loanDetails.lendingToken),
+                   _msgSenderForMarket(bid.marketplaceId) , //from
+                   lender, //to
+                    _paymentAmount // amount                 
+             );
+                  
+            if  (!transferSuccess) {  
+                //could not send funds due to an issue with lender (denylisted?) so we are going to try and send the funds to the
+                // escrow wallet FOR the lender to be able to retrieve at a later time when they are no longer denylisted by the token  
+            
+                address sender = _msgSenderForMarket(bid.marketplaceId);
 
-            //if unable, pay to escrow
-            bid.loanDetails.lendingToken.safeTransferFrom(
-                sender,
-                address(this),
-                _paymentAmount
-            );
+                // fee on transfer tokens are not supported in the lenderAcceptBid step
 
-            uint256 balanceAfter = bid.loanDetails.lendingToken.balanceOf(
-                address(this)
-            );
+                //if unable, pay to escrow
+                bid.loanDetails.lendingToken.safeTransferFrom(
+                    sender,
+                    address(this),
+                    _paymentAmount
+                ); 
 
-            //used for fee-on-send tokens
-            uint256 paymentAmountReceived = balanceAfter - balanceBefore;
+                bid.loanDetails.lendingToken.forceApprove(
+                    address(escrowVault),
+                    _paymentAmount
+                );
 
-            bid.loanDetails.lendingToken.approve(
-                address(escrowVault),
-                paymentAmountReceived
-            );
+                IEscrowVault(escrowVault).deposit(
+                    lender,
+                    address(bid.loanDetails.lendingToken),
+                    _paymentAmount
+                );
 
-            IEscrowVault(escrowVault).deposit(
-                lender,
-                address(bid.loanDetails.lendingToken),
-                paymentAmountReceived
-            );
-        }
+
+            }
 
         address loanRepaymentListener = repaymentListenerForBid[_bidId];
 
@@ -924,7 +950,54 @@ contract TellerV2 is
         }
     }
 
+    /*
+      A try/catch pattern for safeTransferERC20 that helps support standard ERC20 tokens and non-standard ones like USDT 
 
+      @notice  If the token address is an EOA, callSuccess will always be true so token address should always be a contract. 
+    */
+    function safeTransferFromERC20Custom(
+
+        address _token,
+        address _from,
+        address _to,
+        uint256 _amount 
+
+    ) internal virtual returns (bool success) {
+
+        //https://github.com/nomad-xyz/ExcessivelySafeCall
+        //this works similarly to a try catch -- an inner revert doesnt revert us but will make callSuccess be false. 
+         ( bool callSuccess, bytes memory callReturnData ) = ExcessivelySafeCall.excessivelySafeCall(
+                address(_token),
+                100000, //max gas 
+                0,  //value (eth) to send in call
+                1000, //max return data size  
+                abi.encodeWithSelector(
+                    IERC20
+                        .transferFrom
+                        .selector,
+                    _from,
+                    _to,
+                    _amount
+                )  
+           );
+    
+
+             //If the token returns data, make sure it returns true. This helps us with USDT which may revert but never returns a bool.
+            bool dataIsSuccess = true;
+            if (callReturnData.length >= 32) {
+                assembly {
+                    // Load the first 32 bytes of the return data (assuming it's a bool)
+                    let result := mload(add(callReturnData, 0x20))
+                    // Check if the result equals `true` (1)
+                    dataIsSuccess := eq(result, 1)
+                }
+            }
+
+           // ensures that both callSuccess (the low-level call didn't fail) and dataIsSuccess (the function returned true if it returned something).
+            return callSuccess && dataIsSuccess; 
+
+
+    }
 
 
     /**

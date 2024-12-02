@@ -8,8 +8,10 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 // Libraries
 import "@openzeppelin/contracts-upgradeable/utils/structs/EnumerableSetUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+import {SafeERC20} from "./openzeppelin/SafeERC20.sol";
+
 // Interfaces
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC1155/IERC1155Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
@@ -19,6 +21,9 @@ import "./interfaces/ITellerV2.sol";
 import "./interfaces/IProtocolPausingManager.sol";
 import "./interfaces/IHasProtocolPausingManager.sol";
 contract CollateralManager is OwnableUpgradeable, ICollateralManager {
+
+    using SafeERC20 for IERC20;
+
     /* Storage */
     using EnumerableSetUpgradeable for EnumerableSetUpgradeable.AddressSet;
     ITellerV2 public tellerV2;
@@ -173,7 +178,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
      * @return validation_ Boolean indicating if the collateral balance was validated.
      */
     function revalidateCollateral(uint256 _bidId)
-        external
+        external view
         returns (bool validation_)
     {
         Collateral[] memory collateralInfos = getCollateralInfo(_bidId);
@@ -189,7 +194,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
     function checkBalances(
         address _borrowerAddress,
         Collateral[] calldata _collateralInfo
-    ) public returns (bool validated_, bool[] memory checks_) {
+    ) public view returns (bool validated_, bool[] memory checks_) {
         return _checkBalances(_borrowerAddress, _collateralInfo, false);
     }
 
@@ -395,13 +400,14 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
             escrowAddress
         );
         // Pull collateral from borrower & deposit into escrow
+        // This will revert with fee-on-transfer tokens 
         if (collateralInfo._collateralType == CollateralType.ERC20) {
-            IERC20Upgradeable(collateralInfo._collateralAddress).transferFrom(
+            IERC20(collateralInfo._collateralAddress).safeTransferFrom(
                 borrower,
                 address(this),
                 collateralInfo._amount
             );
-            IERC20Upgradeable(collateralInfo._collateralAddress).approve(
+            IERC20(collateralInfo._collateralAddress).forceApprove(
                 escrowAddress,
                 collateralInfo._amount
             );
@@ -530,13 +536,13 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
      * @notice Checks the validity of a borrower's multiple collateral balances.
      * @param _borrowerAddress The address of the borrower holding the collateral.
      * @param _collateralInfo Additional information about the collateral assets.
-     * @param _shortCircut  if true, will return immediately until an invalid balance
+     * @param _shortCircuit  if true, will return immediately until an invalid balance
      */
     function _checkBalances(
         address _borrowerAddress,
         Collateral[] memory _collateralInfo,
-        bool _shortCircut
-    ) internal virtual returns (bool validated_, bool[] memory checks_) {
+        bool _shortCircuit
+    ) internal virtual view returns (bool validated_, bool[] memory checks_) {
         checks_ = new bool[](_collateralInfo.length);
         validated_ = true;
         for (uint256 i; i < _collateralInfo.length; i++) {
@@ -548,7 +554,7 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
             if (!isValidated) {
                 validated_ = false;
                 //if short circuit is true, return on the first invalid balance to save execution cycles. Values of checks[] will be invalid/undetermined if shortcircuit is true.
-                if (_shortCircut) {
+                if (_shortCircuit) {
                     return (validated_, checks_);
                 }
             }
@@ -564,13 +570,13 @@ contract CollateralManager is OwnableUpgradeable, ICollateralManager {
     function _checkBalance(
         address _borrowerAddress,
         Collateral memory _collateralInfo
-    ) internal virtual returns (bool) {
+    ) internal virtual view returns (bool) {
         CollateralType collateralType = _collateralInfo._collateralType;
 
         if (collateralType == CollateralType.ERC20) {
             return
                 _collateralInfo._amount <=
-                IERC20Upgradeable(_collateralInfo._collateralAddress).balanceOf(
+                IERC20(_collateralInfo._collateralAddress).balanceOf(
                     _borrowerAddress
                 );
         } else if (collateralType == CollateralType.ERC721) {

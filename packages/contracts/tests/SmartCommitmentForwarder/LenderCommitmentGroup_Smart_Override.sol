@@ -43,13 +43,13 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
 
 
 
-  function mock_prepareSharesForWithdraw(
+   /* function mock_prepareSharesForWithdraw(
         uint256 _amountPoolSharesTokens
     ) external   {
         poolSharesPreparedToWithdrawForLender[msg.sender] = _amountPoolSharesTokens; 
         poolSharesPreparedTimestamp[msg.sender] = block.timestamp;
        
-    } 
+    } */
 
 
     function getMinimumAmountDifferenceToCloseDefaultedLoan(
@@ -145,13 +145,21 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
         return super.sharesExchangeRateInverse();
     }
 
-     function mock_setPoolTokens (address token0, address token1) public {
+    function mock_setPoolTokens (address token0, address token1) public {
 
           mockToken0 = token0;
 
           mockToken1 = token1;
         
     }
+
+    function mock_setBidActive (uint256 _bidId) public {
+
+         activeBids[_bidId] = true;
+        
+    }
+
+    
 /*
     function _getPoolTokens() internal view override returns (address token0, address token1) {
 
