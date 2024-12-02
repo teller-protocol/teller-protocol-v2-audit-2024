@@ -366,6 +366,153 @@ contract UniswapPricingLibraryTest is Testable {
 
 
 
+
+
+function test_getUniswapPriceRatioForPool_zeroPrice() public {
+    mockUniswapPool.set_mockSqrtPriceX96(0);
+
+    uint32 twapInterval = 0;
+    bool zeroForOne = false;
+
+    IUniswapPricingLibrary.PoolRouteConfig memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPool),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 18,
+        token1Decimals: 18
+    });
+
+    try UniswapPricingLibrary.getUniswapPriceRatioForPool(routeConfig) {
+        fail("Expected revert due to zero price");
+    } catch Error(string memory reason) {
+        assertEq(reason, "SafeMath: division by zero", "Unexpected revert reason");
+    }
+}
+
+function test_getUniswapPriceRatioForPool_largePrice() public {
+    // Setting a large sqrtPriceX96 to test upper bounds.
+    mockUniswapPool.set_mockSqrtPriceX96(type(uint160).max);
+
+    uint32 twapInterval = 0;
+    bool zeroForOne = false;
+
+    IUniswapPricingLibrary.PoolRouteConfig memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPool),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 18,
+        token1Decimals: 18
+    });
+
+    uint256 priceRatio = UniswapPricingLibrary.getUniswapPriceRatioForPool(routeConfig);
+
+    assert(priceRatio > 0);
+}
+
+function test_getUniswapPriceRatioForPool_invalidDecimals() public {
+    // Simulate mismatched decimals for edge case testing.
+    mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+    uint32 twapInterval = 0;
+    bool zeroForOne = false;
+
+    IUniswapPricingLibrary.PoolRouteConfig memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPool),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 0, // Invalid decimal value
+        token1Decimals: 18
+    });
+
+    try UniswapPricingLibrary.getUniswapPriceRatioForPool(routeConfig) {
+        fail("Expected revert due to invalid decimals");
+    } catch Error(string memory reason) {
+        assertEq(reason, "Invalid token decimals", "Unexpected revert reason");
+    }
+}
+
+function test_getUniswapPriceRatioForPool_twapInterval() public {
+    // Test with a valid twapInterval to ensure TWAP computation is working.
+    mockUniswapPool.set_mockSqrtPriceX96(2 * 2**96);
+
+    uint32 twapInterval = 60; // 60 seconds TWAP
+    bool zeroForOne = false;
+
+    IUniswapPricingLibrary.PoolRouteConfig memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPool),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 18,
+        token1Decimals: 18
+    });
+
+    uint256 priceRatio = UniswapPricingLibrary.getUniswapPriceRatioForPool(routeConfig);
+
+    assert(priceRatio > 0);
+}
+
+function test_getUniswapPriceRatioForPoolRoutes_twoPools_differentPrices() public {
+    mockUniswapPool.set_mockSqrtPriceX96(4 * 2**96); // Pool 1: sqrtPrice = 4
+    mockUniswapPoolSecondary.set_mockSqrtPriceX96(2 * 2**96); // Pool 2: sqrtPrice = 2
+
+    uint32 twapInterval = 0;
+    bool zeroForOne = false;
+ 
+
+    IUniswapPricingLibrary.PoolRouteConfig[]
+            memory poolRoutes = new IUniswapPricingLibrary.PoolRouteConfig[](
+                2
+            );
+
+    poolRoutes[0] = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPool),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 18,
+        token1Decimals: 18
+    });
+
+    poolRoutes[1] = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPoolSecondary),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 18,
+        token1Decimals: 18
+    });
+
+    uint256 priceRatio = UniswapPricingLibrary.getUniswapPriceRatioForPoolRoutes(poolRoutes);
+
+    uint256 expectedPriceRatio = 8000000000000000000;
+
+    assertEq(priceRatio, expectedPriceRatio, "Unexpected price ratio for two pools with different prices");
+}
+
+function test_getUniswapPriceRatioForPool_twapObservationFallback() public {
+    // Simulate a scenario where TWAP observation data is unavailable.
+    mockUniswapPool.set_mockSqrtPriceX96(1 * 2**96);
+
+    uint32 twapInterval = 3600; // 1 hour TWAP
+    bool zeroForOne = false;
+
+    IUniswapPricingLibrary.PoolRouteConfig memory routeConfig = IUniswapPricingLibrary.PoolRouteConfig({
+        pool: address(mockUniswapPool),
+        zeroForOne: zeroForOne,
+        twapInterval: twapInterval,
+        token0Decimals: 18,
+        token1Decimals: 18
+    });
+
+    // Mock the pool behavior to throw for TWAP intervals.
+    try UniswapPricingLibrary.getUniswapPriceRatioForPool(routeConfig) {
+        fail("Expected revert due to invalid TWAP observation");
+    } catch {
+        // Revert caught successfully.
+    }
+}
+
+
+
+
     
 }
 
