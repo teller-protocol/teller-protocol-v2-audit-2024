@@ -365,6 +365,7 @@ contract SmartCommitmentForwarder_Test is Testable {
 
      }
 
+ 
      function test_setOracle_unauthorized() public {
 
             vm.expectRevert("Sender not authorized");
