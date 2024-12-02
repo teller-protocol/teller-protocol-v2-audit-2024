@@ -32,6 +32,8 @@ contract OracleProtectionManagerTest is Test {
         assertEq(manager.hypernativeOracleIsStrictMode(), false, "Strict mode not unset correctly");
     }
 
+
+
     function test_oracleRegister_withStrictMode() public {
         manager.setOracle(address(mockOracle));
         manager.setStrictMode(true);
