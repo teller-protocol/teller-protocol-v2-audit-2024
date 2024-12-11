@@ -553,7 +553,7 @@ contract LenderCommitmentGroup_Smart is
             "Insufficient Borrower Collateral"
         );
  
-        principalToken.approve(address(TELLER_V2), _principalAmount);
+        principalToken.safeApprove(address(TELLER_V2), _principalAmount);
 
         //do not have to override msg.sender as this contract is the lender !
         _acceptBidWithRepaymentListener(_bidId);
