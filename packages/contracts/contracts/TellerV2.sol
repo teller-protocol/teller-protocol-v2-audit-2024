@@ -933,10 +933,11 @@ contract TellerV2 is
 
             }
 
-        address loanRepaymentListener = repaymentListenerForBid[_bidId];
+         address loanRepaymentListener = repaymentListenerForBid[_bidId];
 
         if (loanRepaymentListener != address(0)) {
-            require(gasleft() >= 80000, "NR gas");  //fixes the 63/64 remaining issue
+            
+            /*require(gasleft() >= 80000, "NR gas");  //fixes the 63/64 remaining issue
             try
                 ILoanRepaymentListener(loanRepaymentListener).repayLoanCallback{
                     gas: 80000
@@ -946,8 +947,48 @@ contract TellerV2 is
                     _payment.principal,
                     _payment.interest
                 )
-            {} catch {}
+            {} catch {} */
+
+            bool repayCallbackSucccess = safeRepayLoanCallback(
+                   loanRepaymentListener,
+                   _bidId,
+                   _msgSenderForMarket(bid.marketplaceId),
+                   _payment.principal,
+                   _payment.interest
+             ); 
+
+
         }
+    }
+
+
+    function safeRepayLoanCallback(
+        address _loanRepaymentListener,
+        uint256 _bidId,
+        address _sender,
+        uint256 _principal,
+        uint256 _interest
+    ) internal virtual returns (bool) {
+
+
+        ( bool callSuccess, bytes memory callReturnData ) = ExcessivelySafeCall.excessivelySafeCall(
+                address(_loanRepaymentListener),
+                80000, //max gas 
+                0,  //value (eth) to send in call
+                1000, //max return data size  
+                abi.encodeWithSelector(
+                    ILoanRepaymentListener
+                        .repayLoanCallback
+                        .selector,
+                    _bidId,
+                    _sender,
+                    _principal,
+                    _interest 
+                )  
+           );
+
+
+        return callSuccess ;
     }
 
     /*
