@@ -704,11 +704,13 @@ contract LenderCommitmentGroup_Smart is
              
             address protocolFeeRecipient = ITellerV2(address(TELLER_V2)).getProtocolFeeRecipient();
 
-              IERC20(principalToken).safeTransferFrom(
-                msg.sender,
-                address(protocolFeeRecipient),
-                 liquidationProtocolFee
-            );
+            if (liquidationProtocolFee > 0) {
+                IERC20(principalToken).safeTransferFrom(
+                    msg.sender,
+                    address(protocolFeeRecipient),
+                    liquidationProtocolFee
+                );
+            }
 
             totalPrincipalTokensRepaid += amountDue;
             tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender - liquidationProtocolFee );
