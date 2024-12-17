@@ -862,12 +862,15 @@ contract TellerV2 is
             emit LoanRepayment(_bidId);
         }
 
-        _sendOrEscrowFunds(_bidId, _payment); //send or escrow the funds
+        
 
         // update our mappings
         bid.loanDetails.totalRepaid.principal += _payment.principal;
         bid.loanDetails.totalRepaid.interest += _payment.interest;
         bid.loanDetails.lastRepaidTimestamp = uint32(block.timestamp);
+        
+        //perform this after state change to mitigate re-entrancy
+        _sendOrEscrowFunds(_bidId, _payment); //send or escrow the funds
 
         // If the loan is paid in full and has a mark, we should update the current reputation
         if (mark != RepMark.Good) {
