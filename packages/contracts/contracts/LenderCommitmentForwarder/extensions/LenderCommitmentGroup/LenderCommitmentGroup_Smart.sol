@@ -968,7 +968,11 @@ contract LenderCommitmentGroup_Smart is
         public
         view
         returns (uint256)
-    {
+    {   
+        if (totalPrincipalTokensRepaid > totalPrincipalTokensLended) {
+            return 0;
+        }
+
         return totalPrincipalTokensLended - totalPrincipalTokensRepaid;
     }
 
