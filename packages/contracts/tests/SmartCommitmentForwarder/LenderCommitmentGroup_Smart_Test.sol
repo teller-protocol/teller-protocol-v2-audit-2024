@@ -896,6 +896,66 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
      }
 
+
+
+
+    function test_liquidation_handles_partially_repaid_loan() public {
+         initialize_group_contract();
+
+
+         vm.warp(1e10);
+
+         uint256 bidId = 1;
+
+         uint256 tokenAmountDifference = 10000;
+
+
+
+         vm.warp(1e20);
+
+
+         int256 tokenAmountDifference = 10000;
+
+         lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
+
+            bidId,
+            tokenAmountDifference
+
+
+            );
+
+
+         /*
+        lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(
+            1000000
+        );
+
+        lenderCommitmentGroupSmart.set_totalInterestCollected(1000000);
+
+        lenderCommitmentGroupSmart.set_tokenDifferenceFromLiquidations(-1000000);
+
+        uint256 sharesAmount = 1000000;
+
+        lenderCommitmentGroupSmart.mock_mintShares(
+            address(lender),
+            sharesAmount
+        );
+
+        uint256 poolTotalEstimatedValue = lenderCommitmentGroupSmart.getPoolTotalEstimatedValue();
+        assertEq(poolTotalEstimatedValue ,  1 * 1000000, "unexpected poolTotalEstimatedValue");
+
+        uint256 rate = lenderCommitmentGroupSmart.super_sharesExchangeRate();
+
+        assertEq(rate , 1 * 1e36, "unexpected sharesExchangeRate");
+
+        */
+
+    }
+
+
+
+
+
     /*
       improve tests for this 
 
