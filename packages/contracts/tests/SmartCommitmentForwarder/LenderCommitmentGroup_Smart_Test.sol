@@ -905,10 +905,30 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          vm.warp(1e10);
 
-         uint256 bidId = 1;
+         uint256 marketId = 0; 
+         uint256 principalAmount = 100;
+         uint32 loanDuration = 500000;
+         uint16 interestRate = 50;
 
-         uint256 tokenAmountDifference = 10000;
+         
+         
+        // submit bid 
+         uint256 bidId = TellerV2SolMock(_tellerV2).submitBid( 
+            address(principalToken),
+            marketId,
+            principalAmount,
+            loanDuration,
+            interestRate,
+            "",
+            address(this)
+         );
 
+
+
+         TellerV2SolMock(_tellerV2).lenderAcceptBid( 
+            bidId
+            );
+        //accept bid 
 
 
          vm.warp(1e20);
