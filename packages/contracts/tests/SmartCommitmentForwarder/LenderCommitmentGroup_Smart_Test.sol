@@ -1260,19 +1260,23 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             10
         );
 
+         lenderCommitmentGroupSmart.set_mockAmountOwedForBid( 4000 - 500, 0 );
+
+
+
 
          vm.warp(10010000000);
 
          
          int256 tokenAmountDifference = 10000;
 
-         lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(900);
+         lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(principalAmount);
 
          //important ! 
          lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(-200);
 
          vm.prank(address(liquidator));
-         principalToken.approve(address(lenderCommitmentGroupSmart), 900-200);
+         principalToken.approve(address(lenderCommitmentGroupSmart), principalAmount-200);
 
 
          //the liquidator sends in 700 principal tokens 
@@ -1384,18 +1388,23 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         );
 
 
+          //declare what is still owed after repay
+          lenderCommitmentGroupSmart.set_mockAmountOwedForBid( 100, 0 );
+
+
+
          vm.warp(10010000000);
 
          
          int256 tokenAmountDifference = 10000;
 
-         lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(900);
+         lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount( principalAmount );
 
          //important ! 
          lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(-200);
 
          vm.prank(address(liquidator));
-         principalToken.approve(address(lenderCommitmentGroupSmart), 900-200);
+         principalToken.approve(address(lenderCommitmentGroupSmart), principalAmount-200);
 
 
          //the liquidator sends in 700 principal tokens 

@@ -669,6 +669,7 @@ contract LenderCommitmentGroup_Smart is
 
         uint256 loanTotalPrincipalAmount = _getLoanTotalPrincipalAmount(_bidId);
         (uint256 principalDue,uint256 interestDue) = _getAmountOwedForBid(_bidId);
+        
         uint256 principalAmountAlreadyRepaid = loanTotalPrincipalAmount - principalDue;
         
 
@@ -722,6 +723,7 @@ contract LenderCommitmentGroup_Smart is
 
             totalPrincipalTokensRepaid += loanTotalPrincipalAmount;
 
+            tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid); //this helps us more correctly calculate the shortfall
             tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender - liquidationProtocolFee );
 
 
@@ -742,10 +744,12 @@ contract LenderCommitmentGroup_Smart is
             //this will make tokenDifference go more negative
 
             //this is the shortfall 
+            tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid);//this helps us more correctly calculate the shortfall
             tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
 
            
         }
+
 
         //this will give collateral to the caller
         ITellerV2(TELLER_V2).lenderCloseLoanWithRecipient(_bidId, msg.sender);
