@@ -962,7 +962,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          vm.warp(1e10);
 
          uint256 marketId = 0; 
-         uint256 principalAmount = 100;
+         uint256 principalAmount = 5000;
          uint32 loanDuration = 500000;
          uint16 interestRate = 50;
 
@@ -989,17 +989,39 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             bidId
             );
 
+          lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+
+
+
+        // do a partial repayment 
+
+        // vm.warp(100000);
+
+
+          vm.prank(address(borrower));
+        principalToken.approve(address(_tellerV2), 1000000);
+
+
+         vm.prank(address(borrower));
+          TellerV2SolMock(_tellerV2).repayLoan(bidId, 510);
 
 
          
-        // do a partial repayment 
+
+
+          //prank the callback
+          vm.prank(address(_tellerV2));
+          lenderCommitmentGroupSmart.repayLoanCallback(
+            bidId,
+            address(borrower),
+            500,
+            10
+        );
 
 
          vm.warp(1e20);
 
-         lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
-
-
+         
          int256 tokenAmountDifference = 10000;
 
 
@@ -1012,6 +1034,11 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
             );
 
+
+         uint256 totalPrincipalTokensRepaid = lenderCommitmentGroupSmart.totalPrincipalTokensRepaid();
+
+         console.log("totalPrincipalTokensRepaid") ;
+         console.log(totalPrincipalTokensRepaid) ;
 
          /*
         lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(

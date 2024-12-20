@@ -193,6 +193,8 @@ ILoanRepaymentCallbacks
         );
     }
 
+ 
+
     /*
      * @notice Calculates the minimum payment amount due for a loan.
      * @param _bidId The id of the loan bid to get the payment amount for.
