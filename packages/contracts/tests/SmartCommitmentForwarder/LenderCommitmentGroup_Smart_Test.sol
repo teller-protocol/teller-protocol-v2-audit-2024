@@ -995,6 +995,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
 
 
+          uint256 principalTokensCommitted = 4000;
+          lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted( principalTokensCommitted );
 
         // do a partial repayment 
 
@@ -1009,16 +1011,16 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
           TellerV2SolMock(_tellerV2).repayLoan(bidId, 510);
 
 
-         
-
+            uint256 repayAmount = 500;
+          uint256 interestAmount = 10;
 
           //prank the callback
           vm.prank(address(_tellerV2));
           lenderCommitmentGroupSmart.repayLoanCallback(
             bidId,
             address(borrower),
-            500,
-            10
+            repayAmount,
+            interestAmount
         );
 
 
@@ -1029,8 +1031,10 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          lenderCommitmentGroupSmart.set_mockAmountOwedForBid(900);
 
+         int256 tokenDifferenceToClose = 200;
+
          //important ! 
-         lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(200);
+         lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(tokenDifferenceToClose);
 
          vm.prank(address(liquidator));
          principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
@@ -1058,12 +1062,18 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          console.log("tokenDifferenceFromLiquidations") ;
          console.logInt(tokenDifferenceFromLiquidations) ;
 
+        assertEq(tokenDifferenceFromLiquidations , tokenDifferenceToClose); //200
 
 
         uint256 poolTotalEstimatedValue = lenderCommitmentGroupSmart.getPoolTotalEstimatedValue();
 
         console.log("poolTotalEstimatedValue") ;
          console.log(poolTotalEstimatedValue) ;
+
+         int256 expectedPoolValue = int256(principalTokensCommitted) + int256(interestAmount) +  tokenDifferenceToClose; // compute this 
+
+         assertEq(int256( poolTotalEstimatedValue), expectedPoolValue);
+
 
          
     }
@@ -1174,6 +1184,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          console.log("poolTotalEstimatedValue") ;
          console.log(poolTotalEstimatedValue) ;
+
+         assertEq(poolTotalEstimatedValue , 0);
 
     }
 
