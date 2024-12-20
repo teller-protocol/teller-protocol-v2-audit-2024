@@ -962,7 +962,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          initialize_group_contract();
 
 
-         vm.warp(1e10);
+         vm.warp(10000000000);
 
          uint256 marketId = 0; 
          uint256 principalAmount = 5000;
@@ -1022,12 +1022,12 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         );
 
 
-         vm.warp(1e20);
+         vm.warp(10010000000);
 
          
          int256 tokenAmountDifference = 10000;
 
-         lenderCommitmentGroupSmart.set_mockAmountOwedForBid(1000);
+         lenderCommitmentGroupSmart.set_mockAmountOwedForBid(900);
 
 
 
@@ -1052,6 +1052,11 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          console.log("totalPrincipalTokensRepaid") ;
          console.log(totalPrincipalTokensRepaid) ;
+
+         int256 tokenDifferenceFromLiquidations = lenderCommitmentGroupSmart.getTokenDifferenceFromLiquidations();
+
+         console.log("tokenDifferenceFromLiquidations") ;
+         console.logInt(tokenDifferenceFromLiquidations) ;
 
          /*
         lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(
