@@ -92,6 +92,9 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         collateralToken.transfer(address(borrower), 1e18);
 
 
+        principalToken.transfer(address(liquidator), 1e18);
+
+
         _uniswapV3Pool.set_mockToken0(address(principalToken));
         _uniswapV3Pool.set_mockToken1(address(collateralToken));
 
@@ -1024,7 +1027,17 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          
          int256 tokenAmountDifference = 10000;
 
+         lenderCommitmentGroupSmart.set_mockAmountOwedForBid(1000);
 
+
+
+
+         vm.prank(address(liquidator));
+         principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
+
+
+
+          vm.prank(address(liquidator));
          //make sure accounting isnt janked after this 
          lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
 
