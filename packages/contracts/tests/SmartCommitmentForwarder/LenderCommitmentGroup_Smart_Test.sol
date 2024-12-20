@@ -898,9 +898,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
 
 
-
-    function test_liquidation_handles_partially_repaid_loan() public {
-         initialize_group_contract();
+    function test_liquidation_bid_not_active() public {
+       initialize_group_contract();
 
 
          vm.warp(1e10);
@@ -910,7 +909,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          uint32 loanDuration = 500000;
          uint16 interestRate = 50;
 
-         
+        
+
          
         // submit bid 
          uint256 bidId = TellerV2SolMock(_tellerV2).submitBid( 
@@ -920,11 +920,14 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             loanDuration,
             interestRate,
             "",
-            address(this)
+            address(borrower)
          );
 
 
+        vm.prank(address(lender));
+        principalToken.approve(address(_tellerV2), 1000000);
 
+        vm.prank(address(lender));
          TellerV2SolMock(_tellerV2).lenderAcceptBid( 
             bidId
             );
@@ -936,6 +939,71 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          int256 tokenAmountDifference = 10000;
 
+          vm.expectRevert("Bid is not active for group");
+         lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
+
+            bidId,
+            tokenAmountDifference
+
+
+            );
+ 
+       
+
+     }
+
+
+
+// yarn contracts test --match-test test_liquidation_handles
+    function test_liquidation_handles_partially_repaid_loan() public {
+         initialize_group_contract();
+
+
+         vm.warp(1e10);
+
+         uint256 marketId = 0; 
+         uint256 principalAmount = 100;
+         uint32 loanDuration = 500000;
+         uint16 interestRate = 50;
+
+        
+
+         
+        // submit bid 
+         uint256 bidId = TellerV2SolMock(_tellerV2).submitBid( 
+            address(principalToken),
+            marketId,
+            principalAmount,
+            loanDuration,
+            interestRate,
+            "",
+            address(borrower)
+         );
+
+
+        vm.prank(address(lender));
+        principalToken.approve(address(_tellerV2), 1000000);
+
+        vm.prank(address(lender));
+         TellerV2SolMock(_tellerV2).lenderAcceptBid( 
+            bidId
+            );
+
+
+
+         
+        // do a partial repayment 
+
+
+         vm.warp(1e20);
+
+         lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+
+
+         int256 tokenAmountDifference = 10000;
+
+
+         //make sure accounting isnt janked after this 
          lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
 
             bidId,
