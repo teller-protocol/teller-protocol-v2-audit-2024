@@ -958,7 +958,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
 
 // yarn contracts test --match-test test_liquidation_handles
-    function test_liquidation_handles_partially_repaid_loan() public {
+    function test_liquidation_handles_partially_repaid_loan_scenarioA() public {
          initialize_group_contract();
 
 
@@ -1029,8 +1029,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          lenderCommitmentGroupSmart.set_mockAmountOwedForBid(900);
 
-
-
+         //important ! 
+         lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(200);
 
          vm.prank(address(liquidator));
          principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
@@ -1058,30 +1058,122 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          console.log("tokenDifferenceFromLiquidations") ;
          console.logInt(tokenDifferenceFromLiquidations) ;
 
-         /*
-        lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(
-            1000000
-        );
 
-        lenderCommitmentGroupSmart.set_totalInterestCollected(1000000);
-
-        lenderCommitmentGroupSmart.set_tokenDifferenceFromLiquidations(-1000000);
-
-        uint256 sharesAmount = 1000000;
-
-        lenderCommitmentGroupSmart.mock_mintShares(
-            address(lender),
-            sharesAmount
-        );
 
         uint256 poolTotalEstimatedValue = lenderCommitmentGroupSmart.getPoolTotalEstimatedValue();
-        assertEq(poolTotalEstimatedValue ,  1 * 1000000, "unexpected poolTotalEstimatedValue");
 
-        uint256 rate = lenderCommitmentGroupSmart.super_sharesExchangeRate();
+        console.log("poolTotalEstimatedValue") ;
+         console.log(poolTotalEstimatedValue) ;
 
-        assertEq(rate , 1 * 1e36, "unexpected sharesExchangeRate");
+         
+    }
 
-        */
+    function test_liquidation_handles_partially_repaid_loan_scenarioB() public {
+         initialize_group_contract();
+
+
+         vm.warp(10000000000);
+
+         uint256 marketId = 0; 
+         uint256 principalAmount = 5000;
+         uint32 loanDuration = 500000;
+         uint16 interestRate = 50;
+
+        
+
+         
+        // submit bid 
+         uint256 bidId = TellerV2SolMock(_tellerV2).submitBid( 
+            address(principalToken),
+            marketId,
+            principalAmount,
+            loanDuration,
+            interestRate,
+            "",
+            address(borrower)
+         );
+
+
+        vm.prank(address(lender));
+        principalToken.approve(address(_tellerV2), 1000000);
+
+        vm.prank(address(lender));
+         TellerV2SolMock(_tellerV2).lenderAcceptBid( 
+            bidId
+            );
+
+          lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+
+
+
+        // do a partial repayment 
+
+        // vm.warp(100000);
+
+
+          vm.prank(address(borrower));
+        principalToken.approve(address(_tellerV2), 1000000);
+
+
+         vm.prank(address(borrower));
+          TellerV2SolMock(_tellerV2).repayLoan(bidId, 510);
+
+
+         
+
+
+          //prank the callback
+          vm.prank(address(_tellerV2));
+          lenderCommitmentGroupSmart.repayLoanCallback(
+            bidId,
+            address(borrower),
+            500,
+            10
+        );
+
+
+         vm.warp(10010000000);
+
+         
+         int256 tokenAmountDifference = 10000;
+
+         lenderCommitmentGroupSmart.set_mockAmountOwedForBid(900);
+
+         //important ! 
+         lenderCommitmentGroupSmart.mock_setMinimumAmountDifferenceToCloseDefaultedLoan(-200);
+
+         vm.prank(address(liquidator));
+         principalToken.approve(address(lenderCommitmentGroupSmart), 1000000);
+
+
+
+          vm.prank(address(liquidator));
+         //make sure accounting isnt janked after this 
+         lenderCommitmentGroupSmart.liquidateDefaultedLoanWithIncentive(
+
+            bidId,
+            tokenAmountDifference
+
+
+            );
+
+
+         uint256 totalPrincipalTokensRepaid = lenderCommitmentGroupSmart.totalPrincipalTokensRepaid();
+
+         console.log("totalPrincipalTokensRepaid") ;
+         console.log(totalPrincipalTokensRepaid) ;
+
+         int256 tokenDifferenceFromLiquidations = lenderCommitmentGroupSmart.getTokenDifferenceFromLiquidations();
+
+         console.log("tokenDifferenceFromLiquidations") ;
+         console.logInt(tokenDifferenceFromLiquidations) ;
+
+
+
+         uint256 poolTotalEstimatedValue = lenderCommitmentGroupSmart.getPoolTotalEstimatedValue();
+
+         console.log("poolTotalEstimatedValue") ;
+         console.log(poolTotalEstimatedValue) ;
 
     }
 
