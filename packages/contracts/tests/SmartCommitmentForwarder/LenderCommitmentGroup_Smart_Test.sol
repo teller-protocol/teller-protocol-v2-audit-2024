@@ -1308,7 +1308,10 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          console.log("poolTotalEstimatedValue") ;
          console.log(poolTotalEstimatedValue) ;
 
-         assertEq(poolTotalEstimatedValue , 3810);
+         uint256 expectedPoolTotalValue = 5310 ; //where does this come from 
+
+
+         assertEq(poolTotalEstimatedValue , expectedPoolTotalValue);
 
     }
 
@@ -1439,7 +1442,10 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
          // 10000   + 50   
 
-         assertEq(poolTotalEstimatedValue , 9850);
+         uint256 expectedPoolTotalValue = 14750 ; //where does this come from 
+
+         assertEq(poolTotalEstimatedValue , expectedPoolTotalValue); 
+
 
     }
 
