@@ -702,7 +702,8 @@ contract LenderCommitmentGroup_Smart is
             //this is used when the collateral value is higher than the principal (rare)
             //the loan will be completely made whole and our contract gets extra funds too
             uint256 tokensToTakeFromSender = abs(minAmountDifference);
-        
+            
+             console.log(tokensToTakeFromSender);
         
            uint256 liquidationProtocolFee = Math.mulDiv( 
                 tokensToTakeFromSender , 
@@ -738,11 +739,19 @@ contract LenderCommitmentGroup_Smart is
            
             uint256 tokensToGiveToSender = abs(minAmountDifference);
 
+             
+        
+               //dont stipend/refund more than principalDue base 
             if (tokensToGiveToSender > principalDue) {
                 tokensToGiveToSender = principalDue;
             }
 
             uint256 netAmountDue =   principalDue - tokensToGiveToSender ;
+
+              console.log(tokensToGiveToSender);
+                console.log(principalDue);
+            console.log(netAmountDue);
+        
 
             if (netAmountDue > 0) {
                 IERC20(principalToken).safeTransferFrom(
