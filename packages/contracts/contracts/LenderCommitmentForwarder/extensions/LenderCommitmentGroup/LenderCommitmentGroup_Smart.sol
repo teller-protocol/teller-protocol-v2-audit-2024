@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+
+import "lib/forge-std/src/console.sol";
+
 // Contracts
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -667,10 +670,11 @@ contract LenderCommitmentGroup_Smart is
         
         //use original principal amount as amountDue
 
-        uint256 loanTotalPrincipalAmount = _getLoanTotalPrincipalAmount(_bidId);
-        (uint256 principalDue,uint256 interestDue) = _getAmountOwedForBid(_bidId);
+        uint256 loanTotalPrincipalAmount = _getLoanTotalPrincipalAmount(_bidId);  //only used for the auction delta amount 
         
-        uint256 principalAmountAlreadyRepaid = loanTotalPrincipalAmount - principalDue;
+        (uint256 principalDue,uint256 interestDue) = _getAmountOwedForBid(_bidId);  //this is the base amount that must be repaid by the liquidator
+        
+      //  uint256 principalAmountAlreadyRepaid = loanTotalPrincipalAmount - principalDue;
         
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
@@ -686,6 +690,8 @@ contract LenderCommitmentGroup_Smart is
                 loanDefaultedOrUnpausedAtTimeStamp
             );
 
+
+        console.logInt(minAmountDifference);
         require(
             _tokenAmountDifference >= minAmountDifference,
             "Insufficient tokenAmountDifference"
@@ -708,7 +714,7 @@ contract LenderCommitmentGroup_Smart is
             IERC20(principalToken).safeTransferFrom(
                 msg.sender,
                 address(this),
-                loanTotalPrincipalAmount + tokensToTakeFromSender - liquidationProtocolFee
+                principalDue + tokensToTakeFromSender - liquidationProtocolFee
             ); 
              
             address protocolFeeRecipient = ITellerV2(address(TELLER_V2)).getProtocolFeeRecipient();
@@ -721,9 +727,9 @@ contract LenderCommitmentGroup_Smart is
                 );
             }
 
-            totalPrincipalTokensRepaid += loanTotalPrincipalAmount;
+            totalPrincipalTokensRepaid += principalDue;
 
-            tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid); //this helps us more correctly calculate the shortfall
+         //   tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid); //this helps us more correctly calculate the shortfall
             tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender - liquidationProtocolFee );
 
 
@@ -732,23 +738,37 @@ contract LenderCommitmentGroup_Smart is
            
             uint256 tokensToGiveToSender = abs(minAmountDifference);
 
-           
-            IERC20(principalToken).safeTransferFrom(
-                msg.sender,
-                address(this),
-                loanTotalPrincipalAmount - tokensToGiveToSender  
-            );
+            if (tokensToGiveToSender > principalDue) {
+                tokensToGiveToSender = principalDue;
+            }
 
-            totalPrincipalTokensRepaid += loanTotalPrincipalAmount;
+            uint256 netAmountDue =   principalDue - tokensToGiveToSender ;
+
+            if (netAmountDue > 0) {
+                IERC20(principalToken).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    netAmountDue //principalDue - tokensToGiveToSender  
+                );
+            }
+
+            totalPrincipalTokensRepaid += principalDue;
 
             //this will make tokenDifference go more negative
 
             //this is the shortfall 
-            tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid);//this helps us more correctly calculate the shortfall
-            tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
+          //  tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid);//this helps us more correctly calculate the shortfall
+            // tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
+
+           //  uint256 shortfallNet = principalDue < tokensToGiveToSender ? tokensToGiveToSender - principalDue  : 0;
+
+              tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
+ 
 
            
         }
+
+        //this will effectively 'forfeit' tokens from this contract equal to ... the amount (principal) that has not been repaid ! principalDue
 
 
         //this will give collateral to the caller
@@ -763,6 +783,7 @@ contract LenderCommitmentGroup_Smart is
         );
     }
 
+   
 
     function getLastUnpausedAt() 
     public view 
