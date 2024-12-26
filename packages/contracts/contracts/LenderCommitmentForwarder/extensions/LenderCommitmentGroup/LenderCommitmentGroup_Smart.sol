@@ -434,8 +434,14 @@ contract LenderCommitmentGroup_Smart is
     {
        
          int256 poolTotalEstimatedValueSigned = int256(totalPrincipalTokensCommitted) 
+         //+ int256( totalPrincipalTokensRepaid )   //cant really incorporate because needs totalPrincipalTokensLended to help balance it 
+          
          + int256(totalInterestCollected)  + int256(tokenDifferenceFromLiquidations) 
-         - int256(totalPrincipalTokensWithdrawn);
+         - int256( totalPrincipalTokensWithdrawn )
+         //- int256( totalPrincipalTokensLended )  //amount borrowed -- should not be incorporated as it does not really affect net value 
+         ;
+
+
 
         //if the poolTotalEstimatedValue_ is less than 0, we treat it as 0.  
         poolTotalEstimatedValue_ = poolTotalEstimatedValueSigned > int256(0)
@@ -661,7 +667,10 @@ contract LenderCommitmentGroup_Smart is
         
         //use original principal amount as amountDue
 
-        uint256 amountDue = _getAmountOwedForBid(_bidId);
+        uint256 loanTotalPrincipalAmount = _getLoanTotalPrincipalAmount(_bidId);
+        (uint256 principalDue,uint256 interestDue) = _getAmountOwedForBid(_bidId);
+        
+        uint256 principalAmountAlreadyRepaid = loanTotalPrincipalAmount - principalDue;
         
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
@@ -673,7 +682,7 @@ contract LenderCommitmentGroup_Smart is
         );
 
         int256 minAmountDifference = getMinimumAmountDifferenceToCloseDefaultedLoan(
-                amountDue,
+                loanTotalPrincipalAmount,
                 loanDefaultedOrUnpausedAtTimeStamp
             );
 
@@ -699,7 +708,7 @@ contract LenderCommitmentGroup_Smart is
             IERC20(principalToken).safeTransferFrom(
                 msg.sender,
                 address(this),
-                amountDue + tokensToTakeFromSender - liquidationProtocolFee
+                loanTotalPrincipalAmount + tokensToTakeFromSender - liquidationProtocolFee
             ); 
              
             address protocolFeeRecipient = ITellerV2(address(TELLER_V2)).getProtocolFeeRecipient();
@@ -712,7 +721,9 @@ contract LenderCommitmentGroup_Smart is
                 );
             }
 
-            totalPrincipalTokensRepaid += amountDue;
+            totalPrincipalTokensRepaid += loanTotalPrincipalAmount;
+
+            tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid); //this helps us more correctly calculate the shortfall
             tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender - liquidationProtocolFee );
 
 
@@ -725,16 +736,20 @@ contract LenderCommitmentGroup_Smart is
             IERC20(principalToken).safeTransferFrom(
                 msg.sender,
                 address(this),
-                amountDue - tokensToGiveToSender  
+                loanTotalPrincipalAmount - tokensToGiveToSender  
             );
 
-            totalPrincipalTokensRepaid += amountDue;
+            totalPrincipalTokensRepaid += loanTotalPrincipalAmount;
 
             //this will make tokenDifference go more negative
+
+            //this is the shortfall 
+            tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid);//this helps us more correctly calculate the shortfall
             tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
 
            
         }
+
 
         //this will give collateral to the caller
         ITellerV2(TELLER_V2).lenderCloseLoanWithRecipient(_bidId, msg.sender);
@@ -743,7 +758,7 @@ contract LenderCommitmentGroup_Smart is
          emit DefaultedLoanLiquidated(
             _bidId,
             msg.sender,
-            amountDue, 
+            loanTotalPrincipalAmount, 
             _tokenAmountDifference
         );
     }
@@ -768,18 +783,29 @@ contract LenderCommitmentGroup_Smart is
         lastUnpausedAt =  block.timestamp;
     }
 
+     function _getLoanTotalPrincipalAmount(uint256 _bidId )
+        internal
+        view
+        virtual
+        returns (uint256 principalAmount)
+    {
+        (,,,, principalAmount, , ,  )
+           = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
+
+       
+    }
+
     
 
     function _getAmountOwedForBid(uint256 _bidId )
         internal
         view
         virtual
-        returns (uint256 amountDue)
+        returns (uint256 principal,uint256 interest)
     {
-        (,,,, amountDue, , ,  )
-         = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
+        Payment memory owed = ITellerV2(TELLER_V2).calculateAmountOwed(_bidId, block.timestamp );
 
-       
+        return (owed.principal, owed.interest) ;
     }
 
 

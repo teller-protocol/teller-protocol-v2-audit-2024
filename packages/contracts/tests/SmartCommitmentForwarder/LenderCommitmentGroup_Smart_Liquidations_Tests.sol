@@ -236,7 +236,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         uint256 bidId = 0;
     
 
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
+       lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(amountOwed); 
 
    
 
@@ -291,7 +291,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
     
      _tellerV2.setMockProtocolFeeRecipient( address(lenderCommitmentGroupSmart)  );
 
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
+       lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(amountOwed); 
 
    
         //time has advanced enough to now have a 50 percent discount s
@@ -347,7 +347,7 @@ function test_liquidateDefaultedLoanWithIncentive_increments_amount_repaid_A() p
       lenderCommitmentGroupSmart.set_totalPrincipalTokensCommitted(originalTotalPrincipalTokensCommitted);
 
 
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
+       lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(amountOwed); 
        _tellerV2.setMockProtocolFeeRecipient( address(lenderCommitmentGroupSmart)  );
 
    
@@ -420,7 +420,7 @@ function test_liquidateDefaultedLoanWithIncentive_increments_amount_repaid_A() p
        _tellerV2.setMockOwner( address(lenderCommitmentGroupSmart)  );
        _tellerV2.setMockProtocolFeeRecipient( address(lenderCommitmentGroupSmart)  );
 
-       lenderCommitmentGroupSmart.set_mockAmountOwedForBid(amountOwed); 
+       lenderCommitmentGroupSmart.set_mockLoanTotalPrincipalAmount(amountOwed); 
 
    
         //time has advanced enough to now have a 50 percent discount s
