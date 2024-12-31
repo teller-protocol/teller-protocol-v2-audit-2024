@@ -940,17 +940,11 @@ contract TellerV2 is
 
         if (loanRepaymentListener != address(0)) {
             
-            /*require(gasleft() >= 80000, "NR gas");  //fixes the 63/64 remaining issue
-            try
-                ILoanRepaymentListener(loanRepaymentListener).repayLoanCallback{
-                    gas: 80000
-                }( //limit gas costs to prevent lender preventing repayments
-                    _bidId,
-                    _msgSenderForMarket(bid.marketplaceId),
-                    _payment.principal,
-                    _payment.interest
-                )
-            {} catch {} */
+         
+         
+
+            //make sure the external call will not fail due to out-of-gas
+            require(gasleft() >= 80000, "NR gas"); //fixes the 63/64 remaining issue
 
             bool repayCallbackSucccess = safeRepayLoanCallback(
                    loanRepaymentListener,
@@ -973,6 +967,7 @@ contract TellerV2 is
         uint256 _interest
     ) internal virtual returns (bool) {
 
+        //The EVM will only forward 63/64 of the remaining gas to the external call to _loanRepaymentListener.
 
         ( bool callSuccess, bytes memory callReturnData ) = ExcessivelySafeCall.excessivelySafeCall(
                 address(_loanRepaymentListener),
@@ -993,7 +988,6 @@ contract TellerV2 is
 
         return callSuccess ;
     }
-
     /*
       A try/catch pattern for safeTransferERC20 that helps support standard ERC20 tokens and non-standard ones like USDT 
 
