@@ -143,6 +143,7 @@ contract LenderCommitmentGroup_Smart is
 
     //mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
+    mapping(uint256 => uint256) public activeBidsAmountDueRemaining;
 
     //this excludes interest
     // maybe it is possible to get rid of this storage slot and calculate it from totalPrincipalTokensRepaid, totalPrincipalTokensLended
@@ -568,6 +569,7 @@ contract LenderCommitmentGroup_Smart is
         totalPrincipalTokensLended += _principalAmount;
 
         activeBids[_bidId] = true; //bool for now
+        activeBidsAmountDueRemaining[_bidId] = totalPrincipalTokensLended;
         
 
         emit BorrowerAcceptedFunds(  
