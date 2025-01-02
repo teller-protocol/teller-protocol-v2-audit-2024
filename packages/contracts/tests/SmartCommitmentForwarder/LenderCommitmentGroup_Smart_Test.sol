@@ -993,6 +993,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
 
 
           uint256 principalTokensCommitted = 4000;
@@ -1121,6 +1122,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
 
 
           uint256 principalTokensCommitted = 4000;
@@ -1256,6 +1258,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
 
 
           uint256 principalTokensCommitted = 4000;
@@ -1397,6 +1400,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
 
 
 
@@ -1539,6 +1543,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
 
 
 
@@ -1691,6 +1696,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
 
 
 
@@ -1859,6 +1865,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
+
 
           //mocking what happens in acceptFunds
           lenderCommitmentGroupSmart.set_totalPrincipalTokensLended(5000);
@@ -1908,18 +1916,18 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
 
 
-            //can now borrow what was repaid + interest , CANNOT borrow the excess repaid amt 
+            //can now borrow what was repaid + interest , CAN  borrow the excess repaid amt 
            assertEq(  
             lenderCommitmentGroupSmart.getPrincipalAmountAvailableToBorrow(),
-            5050,
+            14950,
             "get principal amount available to borrow 2 "
           ); 
 
 
-            //value of the pool does not include excessive repaid amount . 
+            //value of the pool DOES include excessive repaid amount . 
             assertEq(  
              lenderCommitmentGroupSmart.getPoolTotalEstimatedValue(),
-            5050,
+            14950,
             "getPoolTotalEstimatedValue 1 "
           ); 
 
@@ -1980,16 +1988,24 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             originalLoanPrincipalUnpaid= 0; 
         }
 
-         //amount Due  + 200 
-         int256 liqAmountDue =  originalLoanPrincipalUnpaid ; 
-         int256 netLiquidatorPayment = int256(   liqAmountDue + 200 ) ; // 5000  + -200 
-         // 10000   + 50   
+     
+    //     int256 liqAmountDue =  originalLoanPrincipalUnpaid ; 
+         int256 netLiquidatorPayment = int256(   originalLoanPrincipalUnpaid + 200 ) ; // 5000  + -200 
+        
+            
 
-         
+    
+         int256 excessRepaidAmount = 9900 ; 
+
+
          //calculated  in a different way than the solidity does.  More understandable to user story 
-         int256 expectedPoolTotalValue = int256(principalTokensCommitted) + netLiquidatorPayment - int256(originalLoanPrincipalUnpaid) + int256(interestAmount); //where does this come from 
+         int256 expectedPoolTotalValue = int256(
+         principalTokensCommitted) 
+         + netLiquidatorPayment 
+         + excessRepaidAmount
+         - int256(originalLoanPrincipalUnpaid)
+          + int256(interestAmount); //where does this come from 
 
- 
  
          assertEq(poolTotalEstimatedValue , uint256( expectedPoolTotalValue )); 
 
@@ -2056,6 +2072,9 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
 
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
+
+
           //mocking what happens in acceptFunds
           lenderCommitmentGroupSmart.set_totalPrincipalTokensLended(55000);
  
@@ -2104,18 +2123,18 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
 
 
-            //can now borrow what was repaid + interest , CANNOT borrow the excess repaid amt 
+            //can now borrow what was repaid + interest , CAN borrow the excess repaid amt 
            assertEq(  
             lenderCommitmentGroupSmart.getPrincipalAmountAvailableToBorrow(),
-            55050,
+            64950,
             "get principal amount available to borrow 2 "
           ); 
 
 
-            //value of the pool does not include excessive repaid amount . 
+            //value of the pool  DOE include excessive repaid amount . 
             assertEq(  
              lenderCommitmentGroupSmart.getPoolTotalEstimatedValue(),
-            55050,
+            64950,
             "getPoolTotalEstimatedValue 1 "
           ); 
 
@@ -2177,13 +2196,20 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         }
 
          //amount Due  + 200 
-         int256 liqAmountDue =  originalLoanPrincipalUnpaid ; 
-         int256 netLiquidatorPayment = int256(   liqAmountDue + 200 ) ; // 5000  + -200 
+         //int256 liqAmountDue =  originalLoanPrincipalUnpaid ; 
+         int256 netLiquidatorPayment = int256(   originalLoanPrincipalUnpaid + 200 ) ; // 5000  + -200 
          // 10000   + 50   
+
+
+          int256 excessRepaidAmount = 9900 ; 
 
          
          //calculated  in a different way than the solidity does.  More understandable to user story 
-         int256 expectedPoolTotalValue = int256(principalTokensCommitted) + netLiquidatorPayment - int256(originalLoanPrincipalUnpaid) + int256(interestAmount); //where does this come from 
+         int256 expectedPoolTotalValue = int256(principalTokensCommitted) 
+         + netLiquidatorPayment 
+         + excessRepaidAmount 
+         - int256(originalLoanPrincipalUnpaid)
+          + int256(interestAmount); //where does this come from 
 
  
  
@@ -2251,6 +2277,8 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
             );
 
           lenderCommitmentGroupSmart.set_mockBidAsActiveForGroup(bidId, true);
+          lenderCommitmentGroupSmart.set_mockActiveBidsAmountDueRemaining(bidId, principalAmount);
+
 
           //mocking what happens in acceptFunds
           lenderCommitmentGroupSmart.set_totalPrincipalTokensLended(55000);
@@ -2308,10 +2336,10 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
           ); 
 
 
-            //value of the pool does not include excessive repaid amount . 
+            //value of the pool DOES also  include excessive repaid amount . 
             assertEq(  
              lenderCommitmentGroupSmart.getPoolTotalEstimatedValue(),
-            55050,
+            64950,
             "getPoolTotalEstimatedValue 1 "
           ); 
 
@@ -2363,7 +2391,9 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
          console.log(poolTotalEstimatedValue) ;
 
 
-         int256 originalLoanPrincipalUnpaid =  int256( principalAmount ) - int256( repayAmount ) ;
+         int256 originalLoanPrincipalUnpaid = 
+          int256( principalAmount ) 
+          - int256( repayAmount ) ;
 
         // originalLoanPrincipalUnpaid = Math.max (  originalLoanPrincipalUnpaid , 0) ;
 
@@ -2373,13 +2403,19 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
         }
 
          //amount Due  + 200 
-         int256 liqAmountDue =  originalLoanPrincipalUnpaid ; 
-         int256 netLiquidatorPayment = int256(   liqAmountDue + 200 ) ; // 5000  + -200 
+   
+         int256 netLiquidatorPayment = int256(   originalLoanPrincipalUnpaid + 200 ) ; // 5000  + -200 
          // 10000   + 50   
 
+         int256 excessRepaidAmount = 9900 ; 
          
          //calculated  in a different way than the solidity does.  More understandable to user story 
-         int256 expectedPoolTotalValue = int256(principalTokensCommitted) + netLiquidatorPayment - int256(originalLoanPrincipalUnpaid) + int256(interestAmount); //where does this come from 
+         int256 expectedPoolTotalValue = 
+         int256(principalTokensCommitted) 
+         + netLiquidatorPayment 
+         + excessRepaidAmount 
+         - int256(originalLoanPrincipalUnpaid)
+          + int256(interestAmount);  
 
  
  
