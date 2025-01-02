@@ -571,7 +571,7 @@ contract LenderCommitmentGroup_Smart is
         totalPrincipalTokensLended += _principalAmount;
 
         activeBids[_bidId] = true; //bool for now
-        activeBidsAmountDueRemaining[_bidId] = totalPrincipalTokensLended;
+        activeBidsAmountDueRemaining[_bidId] =  _principalAmount;
         
 
         emit BorrowerAcceptedFunds(  

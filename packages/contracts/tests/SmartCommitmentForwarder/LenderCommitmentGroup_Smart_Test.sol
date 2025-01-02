@@ -1916,7 +1916,7 @@ contract LenderCommitmentGroup_Smart_Test is Testable {
 
 
 
-            //can now borrow what was repaid + interest , CAN  borrow the excess repaid amt 
+            //can now borrow what was repaid + interest , CANNOT  borrow the excess repaid amt 
            assertEq(  
             lenderCommitmentGroupSmart.getPrincipalAmountAvailableToBorrow(),
             14950,
