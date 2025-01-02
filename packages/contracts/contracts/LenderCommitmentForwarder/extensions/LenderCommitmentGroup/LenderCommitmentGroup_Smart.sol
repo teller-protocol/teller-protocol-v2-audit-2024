@@ -997,14 +997,15 @@ contract LenderCommitmentGroup_Smart is
         activeBidsAmountDueRemaining[_bidId] -= principalAmountAppliedToAmountDueRemaining; 
  
 
+        totalPrincipalTokensRepaid += principalAmountAppliedToAmountDueRemaining;
+        totalInterestCollected += interestAmount;
+
+
         uint256 excessiveRepaymentAmount = principalAmount <  amountDueRemaining ? 
-            0 : (principalAmount - amountDueRemaining); 
- 
+            0 : (principalAmount - amountDueRemaining);  
  
         excessivePrincipalTokensRepaid += excessiveRepaymentAmount; 
 
-        totalPrincipalTokensRepaid += principalAmountAppliedToAmountDueRemaining;
-        totalInterestCollected += interestAmount;
 
          emit LoanRepaid(
             _bidId,
