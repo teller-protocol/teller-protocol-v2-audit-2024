@@ -94,6 +94,10 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
     function set_mockLoanTotalPrincipalAmount(uint256 _principal) public {
         mockLoanTotalPrincipalAmount = _principal;
 
+    }   
+
+      function set_totalPrincipalTokensLended(uint256 _mockAmt) public {
+        totalPrincipalTokensLended = _mockAmt;
     }
 
     function set_totalPrincipalTokensRepaid(uint256 _mockAmt) public {
