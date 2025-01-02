@@ -787,7 +787,7 @@ contract LenderCommitmentGroup_Smart is
          emit DefaultedLoanLiquidated(
             _bidId,
             msg.sender,
-            loanTotalPrincipalAmount, 
+            principalDue, 
             _tokenAmountDifference
         );
     }
