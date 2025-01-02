@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
- 
-
+  
 // Contracts
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -689,6 +688,7 @@ contract LenderCommitmentGroup_Smart is
                 loanDefaultedOrUnpausedAtTimeStamp
             );
  
+ 
         require(
             _tokenAmountDifference >= minAmountDifference,
             "Insufficient tokenAmountDifference"
@@ -744,8 +744,7 @@ contract LenderCommitmentGroup_Smart is
             }
 
             uint256 netAmountDue =   principalDue - tokensToGiveToSender ;
-
-           
+ 
 
             if (netAmountDue > 0) {
                 IERC20(principalToken).safeTransferFrom(
@@ -781,7 +780,7 @@ contract LenderCommitmentGroup_Smart is
          emit DefaultedLoanLiquidated(
             _bidId,
             msg.sender,
-            loanTotalPrincipalAmount, 
+            principalDue, 
             _tokenAmountDifference
         );
     }
