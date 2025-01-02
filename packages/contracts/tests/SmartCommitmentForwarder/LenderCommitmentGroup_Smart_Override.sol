@@ -16,7 +16,10 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
     uint256 mockSharesExchangeRate;
     int256 mockMinimumAmountDifferenceToCloseDefaultedLoan;
 
-    uint256 mockAmountOwed;
+    uint256 mockLoanTotalPrincipalAmount;
+
+    uint256 mockAmountOwedPrincipal;
+    uint256 mockAmountOwedInterest;
 
     address mockToken0;
     address mockToken1;
@@ -71,15 +74,27 @@ contract LenderCommitmentGroup_Smart_Override is LenderCommitmentGroup_Smart {
     }
 
     function _getAmountOwedForBid(uint256 _bidId )
-     internal override view returns (uint256){
-        return mockAmountOwed;
+     internal override view returns (uint256, uint256){
+        return (mockAmountOwedPrincipal,mockAmountOwedInterest );
 
      }
 
-    function set_mockAmountOwedForBid(uint256 _amt) public {
-        mockAmountOwed = _amt;
+    function set_mockAmountOwedForBid(uint256 _principal,uint256 _interest) public {
+        mockAmountOwedPrincipal = _principal;
+        mockAmountOwedInterest = _interest;
     }
 
+
+
+     function _getLoanTotalPrincipalAmount(uint256 _bidId )
+     internal override view returns (uint256){
+        return mockLoanTotalPrincipalAmount;
+
+     }
+    function set_mockLoanTotalPrincipalAmount(uint256 _principal) public {
+        mockLoanTotalPrincipalAmount = _principal;
+
+    }
 
     function set_totalPrincipalTokensRepaid(uint256 _mockAmt) public {
         totalPrincipalTokensRepaid = _mockAmt;
