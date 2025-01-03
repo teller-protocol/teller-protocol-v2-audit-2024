@@ -862,12 +862,15 @@ contract TellerV2 is
             emit LoanRepayment(_bidId);
         }
 
-        _sendOrEscrowFunds(_bidId, _payment); //send or escrow the funds
+        
 
         // update our mappings
         bid.loanDetails.totalRepaid.principal += _payment.principal;
         bid.loanDetails.totalRepaid.interest += _payment.interest;
         bid.loanDetails.lastRepaidTimestamp = uint32(block.timestamp);
+        
+        //perform this after state change to mitigate re-entrancy
+        _sendOrEscrowFunds(_bidId, _payment); //send or escrow the funds
 
         // If the loan is paid in full and has a mark, we should update the current reputation
         if (mark != RepMark.Good) {
@@ -933,23 +936,58 @@ contract TellerV2 is
 
             }
 
-        address loanRepaymentListener = repaymentListenerForBid[_bidId];
+         address loanRepaymentListener = repaymentListenerForBid[_bidId];
 
         if (loanRepaymentListener != address(0)) {
-            require(gasleft() >= 80000, "NR gas");  //fixes the 63/64 remaining issue
-            try
-                ILoanRepaymentListener(loanRepaymentListener).repayLoanCallback{
-                    gas: 80000
-                }( //limit gas costs to prevent lender preventing repayments
-                    _bidId,
-                    _msgSenderForMarket(bid.marketplaceId),
-                    _payment.principal,
-                    _payment.interest
-                )
-            {} catch {}
+            
+         
+         
+
+            //make sure the external call will not fail due to out-of-gas
+            require(gasleft() >= 80000, "NR gas"); //fixes the 63/64 remaining issue
+
+            bool repayCallbackSucccess = safeRepayLoanCallback(
+                   loanRepaymentListener,
+                   _bidId,
+                   _msgSenderForMarket(bid.marketplaceId),
+                   _payment.principal,
+                   _payment.interest
+             ); 
+
+
         }
     }
 
+
+    function safeRepayLoanCallback(
+        address _loanRepaymentListener,
+        uint256 _bidId,
+        address _sender,
+        uint256 _principal,
+        uint256 _interest
+    ) internal virtual returns (bool) {
+
+        //The EVM will only forward 63/64 of the remaining gas to the external call to _loanRepaymentListener.
+
+        ( bool callSuccess, bytes memory callReturnData ) = ExcessivelySafeCall.excessivelySafeCall(
+                address(_loanRepaymentListener),
+                80000, //max gas 
+                0,  //value (eth) to send in call
+                1000, //max return data size  
+                abi.encodeWithSelector(
+                    ILoanRepaymentListener
+                        .repayLoanCallback
+                        .selector,
+                    _bidId,
+                    _sender,
+                    _principal,
+                    _interest 
+                )  
+           );
+
+
+        return callSuccess ;
+    }
     /*
       A try/catch pattern for safeTransferERC20 that helps support standard ERC20 tokens and non-standard ones like USDT 
 

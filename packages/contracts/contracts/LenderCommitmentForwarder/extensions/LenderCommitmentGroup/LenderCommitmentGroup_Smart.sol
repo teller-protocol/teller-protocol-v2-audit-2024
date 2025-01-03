@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+  
 // Contracts
 import "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -123,6 +124,7 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 public totalPrincipalTokensLended;
     uint256 public totalPrincipalTokensRepaid; //subtract this and the above to find total principal tokens outstanding for loans
+    uint256 public excessivePrincipalTokensRepaid;
 
     uint256 public totalInterestCollected;
 
@@ -142,6 +144,7 @@ contract LenderCommitmentGroup_Smart is
 
     //mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
+    mapping(uint256 => uint256) public activeBidsAmountDueRemaining;
 
     //this excludes interest
     // maybe it is possible to get rid of this storage slot and calculate it from totalPrincipalTokensRepaid, totalPrincipalTokensLended
@@ -434,8 +437,15 @@ contract LenderCommitmentGroup_Smart is
     {
        
          int256 poolTotalEstimatedValueSigned = int256(totalPrincipalTokensCommitted) 
+         //+ int256( totalPrincipalTokensRepaid )   //cant really incorporate because needs totalPrincipalTokensLended to help balance it 
+          
          + int256(totalInterestCollected)  + int256(tokenDifferenceFromLiquidations) 
-         - int256(totalPrincipalTokensWithdrawn);
+         + int256( excessivePrincipalTokensRepaid )
+         - int256( totalPrincipalTokensWithdrawn )
+         //- int256( totalPrincipalTokensLended )  //amount borrowed -- should not be incorporated as it does not really affect net value 
+         ;
+
+
 
         //if the poolTotalEstimatedValue_ is less than 0, we treat it as 0.  
         poolTotalEstimatedValue_ = poolTotalEstimatedValueSigned > int256(0)
@@ -553,7 +563,7 @@ contract LenderCommitmentGroup_Smart is
             "Insufficient Borrower Collateral"
         );
  
-        principalToken.approve(address(TELLER_V2), _principalAmount);
+        principalToken.safeApprove(address(TELLER_V2), _principalAmount);
 
         //do not have to override msg.sender as this contract is the lender !
         _acceptBidWithRepaymentListener(_bidId);
@@ -561,6 +571,7 @@ contract LenderCommitmentGroup_Smart is
         totalPrincipalTokensLended += _principalAmount;
 
         activeBids[_bidId] = true; //bool for now
+        activeBidsAmountDueRemaining[_bidId] =  _principalAmount;
         
 
         emit BorrowerAcceptedFunds(  
@@ -661,7 +672,11 @@ contract LenderCommitmentGroup_Smart is
         
         //use original principal amount as amountDue
 
-        uint256 amountDue = _getAmountOwedForBid(_bidId);
+        uint256 loanTotalPrincipalAmount = _getLoanTotalPrincipalAmount(_bidId);  //only used for the auction delta amount 
+        
+        (uint256 principalDue,uint256 interestDue) = _getAmountOwedForBid(_bidId);  //this is the base amount that must be repaid by the liquidator
+        
+      //  uint256 principalAmountAlreadyRepaid = loanTotalPrincipalAmount - principalDue;
         
 
         uint256 loanDefaultedTimeStamp = ITellerV2(TELLER_V2)
@@ -673,10 +688,11 @@ contract LenderCommitmentGroup_Smart is
         );
 
         int256 minAmountDifference = getMinimumAmountDifferenceToCloseDefaultedLoan(
-                amountDue,
+                loanTotalPrincipalAmount,
                 loanDefaultedOrUnpausedAtTimeStamp
             );
-
+ 
+ 
         require(
             _tokenAmountDifference >= minAmountDifference,
             "Insufficient tokenAmountDifference"
@@ -687,7 +703,8 @@ contract LenderCommitmentGroup_Smart is
             //this is used when the collateral value is higher than the principal (rare)
             //the loan will be completely made whole and our contract gets extra funds too
             uint256 tokensToTakeFromSender = abs(minAmountDifference);
-        
+            
+           
         
            uint256 liquidationProtocolFee = Math.mulDiv( 
                 tokensToTakeFromSender , 
@@ -699,18 +716,22 @@ contract LenderCommitmentGroup_Smart is
             IERC20(principalToken).safeTransferFrom(
                 msg.sender,
                 address(this),
-                amountDue + tokensToTakeFromSender - liquidationProtocolFee
+                principalDue + tokensToTakeFromSender - liquidationProtocolFee
             ); 
              
             address protocolFeeRecipient = ITellerV2(address(TELLER_V2)).getProtocolFeeRecipient();
 
-              IERC20(principalToken).safeTransferFrom(
-                msg.sender,
-                address(protocolFeeRecipient),
-                 liquidationProtocolFee
-            );
+            if (liquidationProtocolFee > 0) {
+                IERC20(principalToken).safeTransferFrom(
+                    msg.sender,
+                    address(protocolFeeRecipient),
+                    liquidationProtocolFee
+                );
+            }
 
-            totalPrincipalTokensRepaid += amountDue;
+            totalPrincipalTokensRepaid += principalDue;
+
+         //   tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid); //this helps us more correctly calculate the shortfall
             tokenDifferenceFromLiquidations += int256(tokensToTakeFromSender - liquidationProtocolFee );
 
 
@@ -719,20 +740,42 @@ contract LenderCommitmentGroup_Smart is
            
             uint256 tokensToGiveToSender = abs(minAmountDifference);
 
-           
-            IERC20(principalToken).safeTransferFrom(
-                msg.sender,
-                address(this),
-                amountDue - tokensToGiveToSender  
-            );
+             
+        
+               //dont stipend/refund more than principalDue base 
+            if (tokensToGiveToSender > principalDue) {
+                tokensToGiveToSender = principalDue;
+            }
 
-            totalPrincipalTokensRepaid += amountDue;
+            uint256 netAmountDue =   principalDue - tokensToGiveToSender ;
+ 
+
+            if (netAmountDue > 0) {
+                IERC20(principalToken).safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    netAmountDue //principalDue - tokensToGiveToSender  
+                );
+            }
+
+            totalPrincipalTokensRepaid += principalDue;
 
             //this will make tokenDifference go more negative
-            tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
+
+            //this is the shortfall 
+          //  tokenDifferenceFromLiquidations += int256(principalAmountAlreadyRepaid);//this helps us more correctly calculate the shortfall
+            // tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
+
+           //  uint256 shortfallNet = principalDue < tokensToGiveToSender ? tokensToGiveToSender - principalDue  : 0;
+
+              tokenDifferenceFromLiquidations -= int256(tokensToGiveToSender);
+ 
 
            
         }
+
+        //this will effectively 'forfeit' tokens from this contract equal to ... the amount (principal) that has not been repaid ! principalDue
+
 
         //this will give collateral to the caller
         ITellerV2(TELLER_V2).lenderCloseLoanWithRecipient(_bidId, msg.sender);
@@ -741,11 +784,12 @@ contract LenderCommitmentGroup_Smart is
          emit DefaultedLoanLiquidated(
             _bidId,
             msg.sender,
-            amountDue, 
+            principalDue, 
             _tokenAmountDifference
         );
     }
 
+   
 
     function getLastUnpausedAt() 
     public view 
@@ -766,18 +810,29 @@ contract LenderCommitmentGroup_Smart is
         lastUnpausedAt =  block.timestamp;
     }
 
+     function _getLoanTotalPrincipalAmount(uint256 _bidId )
+        internal
+        view
+        virtual
+        returns (uint256 principalAmount)
+    {
+        (,,,, principalAmount, , ,  )
+           = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
+
+       
+    }
+
     
 
     function _getAmountOwedForBid(uint256 _bidId )
         internal
         view
         virtual
-        returns (uint256 amountDue)
+        returns (uint256 principal,uint256 interest)
     {
-        (,,,, amountDue, , ,  )
-         = ITellerV2(TELLER_V2).getLoanSummary(_bidId);
+        Payment memory owed = ITellerV2(TELLER_V2).calculateAmountOwed(_bidId, block.timestamp );
 
-       
+        return (owed.principal, owed.interest) ;
     }
 
 
@@ -919,20 +974,38 @@ contract LenderCommitmentGroup_Smart is
  
 
     /*
-    This  callback occurs when a TellerV2 repayment happens or when a TellerV2 liquidate happens 
-
-    lenderCloseLoan does not trigger a repayLoanCallback 
-
-    It is important that only teller loans FOR THIS POOL can call this !
-     */
+    @dev This callback occurs when a TellerV2 repayment happens or when a TellerV2 liquidate happens 
+    @dev lenderCloseLoan does not trigger a repayLoanCallback 
+    @dev It is important that only teller loans for this specific pool can call this
+    @dev It is important that this function does not revert even if paused since repayments can occur in this case
+    */
     function repayLoanCallback(
         uint256 _bidId,
         address repayer,
         uint256 principalAmount,
         uint256 interestAmount
-    ) external onlyTellerV2 whenForwarderNotPaused whenNotPaused bidIsActiveForGroup(_bidId) { 
-        totalPrincipalTokensRepaid += principalAmount;
+    ) external onlyTellerV2 bidIsActiveForGroup(_bidId) { 
+
+        uint256 amountDueRemaining = activeBidsAmountDueRemaining[_bidId];
+
+        
+        uint256 principalAmountAppliedToAmountDueRemaining = principalAmount <  amountDueRemaining ? 
+            principalAmount : amountDueRemaining; 
+
+
+        //should never fail due to the above .
+        activeBidsAmountDueRemaining[_bidId] -= principalAmountAppliedToAmountDueRemaining; 
+ 
+
+        totalPrincipalTokensRepaid += principalAmountAppliedToAmountDueRemaining;
         totalInterestCollected += interestAmount;
+
+
+        uint256 excessiveRepaymentAmount = principalAmount <  amountDueRemaining ? 
+            0 : (principalAmount - amountDueRemaining);  
+ 
+        excessivePrincipalTokensRepaid += excessiveRepaymentAmount; 
+
 
          emit LoanRepaid(
             _bidId,
@@ -966,7 +1039,11 @@ contract LenderCommitmentGroup_Smart is
         public
         view
         returns (uint256)
-    {
+    {   
+        if (totalPrincipalTokensRepaid > totalPrincipalTokensLended) {
+            return 0;
+        }
+
         return totalPrincipalTokensLended - totalPrincipalTokensRepaid;
     }
 

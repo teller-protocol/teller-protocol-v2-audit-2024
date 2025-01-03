@@ -63,11 +63,14 @@ contract LenderCommitmentGroupShares is ERC20, Ownable {
         uint256 amount
     ) internal override {
 
+        if (amount > 0) {
+               //reset prepared   
+            poolSharesPreparedToWithdrawForLender[from] = 0;
+            poolSharesPreparedTimestamp[from] =  block.timestamp;
 
-         //reset prepared   
-        poolSharesPreparedToWithdrawForLender[from] = 0;
-        poolSharesPreparedTimestamp[from] =  block.timestamp;
+        }
 
+      
     }
 
 
