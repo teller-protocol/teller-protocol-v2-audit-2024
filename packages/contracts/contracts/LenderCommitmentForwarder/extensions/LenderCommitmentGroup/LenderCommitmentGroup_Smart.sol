@@ -124,6 +124,7 @@ contract LenderCommitmentGroup_Smart is
 
     uint256 public totalPrincipalTokensLended;
     uint256 public totalPrincipalTokensRepaid; //subtract this and the above to find total principal tokens outstanding for loans
+    uint256 public excessivePrincipalTokensRepaid;
 
     uint256 public totalInterestCollected;
 
@@ -143,6 +144,7 @@ contract LenderCommitmentGroup_Smart is
 
     //mapping(address => uint256) public principalTokensCommittedByLender;
     mapping(uint256 => bool) public activeBids;
+    mapping(uint256 => uint256) public activeBidsAmountDueRemaining;
 
     //this excludes interest
     // maybe it is possible to get rid of this storage slot and calculate it from totalPrincipalTokensRepaid, totalPrincipalTokensLended
@@ -438,6 +440,7 @@ contract LenderCommitmentGroup_Smart is
          //+ int256( totalPrincipalTokensRepaid )   //cant really incorporate because needs totalPrincipalTokensLended to help balance it 
           
          + int256(totalInterestCollected)  + int256(tokenDifferenceFromLiquidations) 
+         + int256( excessivePrincipalTokensRepaid )
          - int256( totalPrincipalTokensWithdrawn )
          //- int256( totalPrincipalTokensLended )  //amount borrowed -- should not be incorporated as it does not really affect net value 
          ;
@@ -568,6 +571,7 @@ contract LenderCommitmentGroup_Smart is
         totalPrincipalTokensLended += _principalAmount;
 
         activeBids[_bidId] = true; //bool for now
+        activeBidsAmountDueRemaining[_bidId] =  _principalAmount;
         
 
         emit BorrowerAcceptedFunds(  
@@ -981,8 +985,27 @@ contract LenderCommitmentGroup_Smart is
         uint256 principalAmount,
         uint256 interestAmount
     ) external onlyTellerV2 bidIsActiveForGroup(_bidId) { 
-        totalPrincipalTokensRepaid += principalAmount;
+
+        uint256 amountDueRemaining = activeBidsAmountDueRemaining[_bidId];
+
+        
+        uint256 principalAmountAppliedToAmountDueRemaining = principalAmount <  amountDueRemaining ? 
+            principalAmount : amountDueRemaining; 
+
+
+        //should never fail due to the above .
+        activeBidsAmountDueRemaining[_bidId] -= principalAmountAppliedToAmountDueRemaining; 
+ 
+
+        totalPrincipalTokensRepaid += principalAmountAppliedToAmountDueRemaining;
         totalInterestCollected += interestAmount;
+
+
+        uint256 excessiveRepaymentAmount = principalAmount <  amountDueRemaining ? 
+            0 : (principalAmount - amountDueRemaining);  
+ 
+        excessivePrincipalTokensRepaid += excessiveRepaymentAmount; 
+
 
          emit LoanRepaid(
             _bidId,
